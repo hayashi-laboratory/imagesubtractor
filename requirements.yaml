@@ -1,0 +1,11 @@
+name: imagesubtractor
+channels:
+- anaconda
+dependencies:
+- python=3.7
+- pip
+- numpy
+- pandas
+- pyqt
+- pip:
+  - opencv-python
