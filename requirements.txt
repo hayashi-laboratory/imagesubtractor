@@ -1,7 +1,7 @@
 # pip install -r requirements.txt
 
 # base ----------------------------------------
-opencv-python>=4.1.2
+opencv-python<=4.5.1.48
 pandas >= 1.2.1
 numpy>=1.19.2
 pyqt5
