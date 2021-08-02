@@ -10,7 +10,7 @@ This application is code refactoring from `imagesubtandmeasure.py` that created 
 ## Requirements
 
 - python >= 3.7.10
-- opencv-python<=4.5.1.48
+- opencv-python <= 4.5.1.48
 - pandas
 - numpy
 - pyqt5
