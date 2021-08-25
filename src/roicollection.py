@@ -27,6 +27,13 @@ class Roicollection:
     def getlen(self):
         return len(self)
 
+    def copy(self):
+        roicol = Roicollection(None)
+        roicol.roilist = [Roi(None, **roi.to_dict()) for roi in self.roilist]
+        roicol.roidict = self.roidict
+        roicol.paramdict = self.paramdict
+        return roicol
+
     """
     roisarg = [roicolnum, roirownum, roiintervalx, roiintervaly,
                x, y, width, height, radianrot]
