@@ -57,30 +57,31 @@ class Imageprocess(threading.Thread):
         subtractors.start()
         # namedWindow after processing
         cv2.namedWindow(self.windowname, cv2.WINDOW_NORMAL)
-        # this is for opencv imshow
-        counter = 0
-        tempdict = dict()
+        # counter and cache for showing image in order
+        counter: int = 0
+        cache: dict = dict()
         while True:
             i, subtmedimg, binaryimg = output_queue.get()
-            tempdict[i] = subtmedimg
             if i is None:
                 break
+            cache[i] = subtmedimg
             if self.saveflag == True:
                 self.saveaimage(subtmedimg, i)
             # here must have roi processing part
             areadata = self.ipg.roicol.measureareas(binaryimg)
             self.output[i, :] = areadata
 
-            if counter in tempdict:
-                cv2.imshow(self.windowname, tempdict.pop(counter))
+            if counter in cache:
+                cv2.imshow(self.windowname, cache.pop(counter))
                 cv2.setTrackbarPos("slice", self.windowname, counter)
                 counter += 1
 
-        # imshow remain images
-        while counter in tempdict:
-            cv2.imshow(self.windowname, tempdict.pop(counter))
-            cv2.setTrackbarPos("slice", self.windowname, counter)
-            counter += 1
+        # show remaining images
+        if len(cache != 0):
+            while counter in cache:
+                cv2.imshow(self.windowname, cache.pop(counter))
+                cv2.setTrackbarPos("slice", self.windowname, counter)
+                counter += 1
 
         self.ipg.outputdata = self.output
         self.ipg.savedata()

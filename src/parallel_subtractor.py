@@ -1,4 +1,5 @@
 import os
+import os.path as osp
 import threading
 import multiprocessing as mp
 from .subtractor import SubtractorWorker
@@ -44,12 +45,12 @@ class ParallelSubtractor(threading.Thread):
         imagedir = imagestack.imagedir
         imagenamelist = imagestack.imagenamelist
         step_num = range(start, end, slicestep)
-        for i, (current, next) in enumerate(zip(step_num[:-1], step_num[1:])):
+        for i, (pos1, pos2) in enumerate(zip(step_num[:-1], step_num[1:])):
             queue.put_nowait(
                 (
                     i,
-                    os.path.join(imagedir, imagenamelist[current]),
-                    os.path.join(imagedir, imagenamelist[next]),
+                    osp.join(imagedir, imagenamelist[pos1]),
+                    osp.join(imagedir, imagenamelist[pos2]),
                 )
             )
         queue.put_nowait((None, None, None))
