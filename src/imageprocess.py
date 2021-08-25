@@ -24,6 +24,8 @@ class Imageprocess(threading.Thread):
         self.ipg = ipg
         self.imagestack = getattr(self.ipg, "ims", None)
         assert self.imagestack is not None, "[ERROR] Fail to load imagestack"
+        self.roicol = getattr(self.ipg, "roicol", None)
+        assert self.roicol is not None, "[ERROR] Fail to load roicollection"
         self.saveflag = saveflag
         self.threshold = threshold
         self.slicestep = slicestep
@@ -34,9 +36,7 @@ class Imageprocess(threading.Thread):
         self.startslice = self.ipg.startslice
         self.endslice = self.ipg.endslice
         self.processnum = (self.endslice - self.startslice) // (self.slicestep)
-        self.output = np.zeros(
-            (self.processnum, self.ipg.roicol.getlen()), dtype=np.int
-        )
+        self.output = np.zeros((self.processnum, self.roicol.getlen()), dtype=np.int)
         self.image1 = self.imagestack[self.startslice]
 
     def nothing(self, n):
@@ -68,7 +68,7 @@ class Imageprocess(threading.Thread):
             if self.saveflag == True:
                 self.saveaimage(subtmedimg, i)
             # here must have roi processing part
-            areadata = self.ipg.roicol.measureareas(binaryimg)
+            areadata = self.roicol.measureareas(binaryimg)
             self.output[i, :] = areadata
 
             if counter in cache:
