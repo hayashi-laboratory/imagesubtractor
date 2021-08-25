@@ -543,6 +543,7 @@ class MainWindowUI:
         self.endslice = int(self.spinBox_end.value())
         self.threshold = float(self.doubleSpinBox_threshold.value())
         self.slicestep = int(self.spinBox_step.value())
+        processnum = (self.endslice - self.startslice) // self.slicestep
 
         self.subtwindowname = "subtmed"
         cv2.startWindowThread()
@@ -552,7 +553,7 @@ class MainWindowUI:
             empty_img = np.zeros(tempimage.shape)
             cv2.imshow(self.subtwindowname, empty_img)
         cv2.createTrackbar(
-            "slice", self.subtwindowname, 0, self.endslice, self.showsubtmedimg
+            "slice", self.subtwindowname, 0, processnum - 1, self.showsubtmedimg
         )
         pre_normalized = self.checkBox_prenormalized.isChecked()
         self.ip = Imageprocess(
@@ -626,17 +627,3 @@ class MainWindowUI:
         # colimg[img < val] = [[[0,0,255]]]
         # return colimg + img
         return img
-
-    def toggle_l(self):
-        # self.writeinlog("toggle1")
-        # global cause error only made a exe with cx_freeze?
-        # global onofftoggle1
-        # self.writeinlog(str(self.onofftoggle1))
-        if self.startstoptoggle_l:
-            self.button_l.config(text="Stop live", bg="red")
-            self.startstoptoggle_l = False
-            self.livestart()
-        else:
-            self.button_l.config(text="Live", bg=self.orignalbuttoncolor_l)
-            self.startstoptoggle_l = True
-            self.livestop()

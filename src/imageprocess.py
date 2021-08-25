@@ -5,6 +5,8 @@ from multiprocessing import Queue
 import cv2
 import numpy as np
 
+from roicollection import Roicollection
+
 from .parallel_subtractor import ParallelSubtractor
 from .utils import getTime
 
@@ -24,7 +26,7 @@ class Imageprocess(threading.Thread):
         self.ipg = ipg
         self.imagestack = getattr(self.ipg, "ims", None)
         assert self.imagestack is not None, "[ERROR] Fail to load imagestack"
-        self.roicol = getattr(self.ipg, "roicol", None)
+        self.roicol: Roicollection = getattr(self.ipg, "roicol", None)
         assert self.roicol is not None, "[ERROR] Fail to load roicollection"
         self.saveflag = saveflag
         self.threshold = threshold
@@ -51,6 +53,7 @@ class Imageprocess(threading.Thread):
             self.slicestep,
             self.imagestack,
             output_queue,
+            self.roicol.copy(),
             self.normalized,
             daemon=True,
         )
@@ -61,14 +64,13 @@ class Imageprocess(threading.Thread):
         counter: int = 0
         cache: dict = dict()
         while True:
-            i, subtmedimg, binaryimg = output_queue.get()
-            if i is None:
-                break
+            i, subtmedimg, areadata = output_queue.get()
             cache[i] = subtmedimg
+            if (i is None) and (output_queue.empty()):
+                break
             if self.saveflag == True:
                 self.saveaimage(subtmedimg, i)
             # here must have roi processing part
-            areadata = self.roicol.measureareas(binaryimg)
             self.output[i, :] = areadata
 
             if counter in cache:
@@ -77,7 +79,7 @@ class Imageprocess(threading.Thread):
                 counter += 1
 
         # show remaining images
-        if len(cache != 0):
+        if len(cache) != 0:
             while counter in cache:
                 cv2.imshow(self.windowname, cache.pop(counter))
                 cv2.setTrackbarPos("slice", self.windowname, counter)

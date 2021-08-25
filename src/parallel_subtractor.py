@@ -2,6 +2,8 @@ import os
 import os.path as osp
 import threading
 import multiprocessing as mp
+
+from roicollection import Roicollection
 from .subtractor import SubtractorWorker
 from .imagestack import Imagestack
 
@@ -14,6 +16,7 @@ class ParallelSubtractor(threading.Thread):
         slicestep: int,
         imagestack: Imagestack,
         output_queue,
+        roicollection,
         threshold,
         normalized=False,
         num_workers=None,
@@ -27,6 +30,7 @@ class ParallelSubtractor(threading.Thread):
             SubtractorWorker(
                 self.input_queue,
                 self.output_queue,
+                roicollection,
                 threshold=threshold,
                 normalized=normalized,
                 daemon=daemon,
@@ -44,7 +48,7 @@ class ParallelSubtractor(threading.Thread):
         queue = mp.Queue()
         imagedir = imagestack.imagedir
         imagenamelist = imagestack.imagenamelist
-        step_num = range(start, end, slicestep)
+        step_num = range(start, end + 1, slicestep)
         for i, (pos1, pos2) in enumerate(zip(step_num[:-1], step_num[1:])):
             queue.put_nowait(
                 (

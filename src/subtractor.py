@@ -1,15 +1,23 @@
 import numpy as np
 from multiprocessing import Queue, Process
 import cv2
+from .roicollection import Roicollection
 
 
 class SubtractorWorker(Process):
     def __init__(
-        self, input_queue: Queue, output_queue, threshold, normalized=False, daemon=True
+        self,
+        input_queue: Queue,
+        output_queue: Queue,
+        roicollection: Roicollection,
+        threshold: int,
+        normalized: bool = False,
+        daemon: bool = True,
     ):
         super().__init__(daemon=daemon)
         self.input_queue = input_queue
         self.output_queue = output_queue
+        self.roicol = roicollection
         self.threshold = threshold
         self.subtractor = Subtractor(normalized)
 
@@ -26,7 +34,8 @@ class SubtractorWorker(Process):
             retval, binaryimg = cv2.threshold(
                 subtmedimg, threshold, 1, cv2.THRESH_BINARY_INV
             )
-            self.output_queue.put((i, subtmedimg, binaryimg))
+            areadata = self.roicol.measureareas(binaryimg)
+            self.output_queue.put((i, subtmedimg, areadata))
 
 
 class Subtractor:
