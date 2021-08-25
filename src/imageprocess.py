@@ -8,7 +8,7 @@ import numpy as np
 from roicollection import Roicollection
 
 from .parallel_subtractor import ParallelSubtractor
-from .utils import getTime
+from .utils import get_time
 
 
 class Imageprocess(threading.Thread):
@@ -45,7 +45,7 @@ class Imageprocess(threading.Thread):
         pass
 
     def run(self):
-        print(f"[SYSTEM] Start at: {getTime()}")
+        print(f"[SYSTEM] Start at: {get_time()}")
         output_queue = Queue()
         subtractors = ParallelSubtractor(
             self.startslice,
@@ -87,7 +87,7 @@ class Imageprocess(threading.Thread):
 
         self.ipg.outputdata = self.output
         self.ipg.savedata()
-        print(f"[SYSTEM] End at: {getTime()}")
+        print(f"[SYSTEM] End at: {get_time()}")
 
     def saveaimage(self, img, num):
         # filename="".join([datetime.datetime.now().strftime('%Y%m%d%H%M%S_%f'),'.jpg'])

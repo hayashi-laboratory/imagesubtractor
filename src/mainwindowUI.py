@@ -28,7 +28,7 @@ from .imageprocess import Imageprocess
 from .imagestack import Imagestack
 from .roicollection import Roicollection
 from .subtractor import Subtractor
-from .utils import dump_json, fileScanner
+from .utils import dump_json, glob_files
 
 
 class MainWindowUI:
@@ -330,9 +330,9 @@ class MainWindowUI:
         prenorm = self.checkBox_prenormalized.isChecked()
         if prenorm:
             msg = "[SYSTEM] Images will be normalized before subtraction"
-            self.showMessage(msg)
+            self.show_message(msg)
         else:
-            self.statusbar.showMessage("")
+            self.show_message("")
 
     def getFont(self, fonttype="Helvetica", pointsize=None, bold=None, weight=None):
         font = QtGui.QFont(fonttype)
@@ -373,13 +373,13 @@ class MainWindowUI:
         QApplication.setStyle(QStyleFactory.create(styleName))
         QApplication.setPalette(self.originalPalette)
 
-    def showMessage(self, msg):
+    def show_message(self, msg):
         self.statusbar.showMessage(msg)
         print(msg)
 
     def showError(self, msg):
         QMessageBox.information(self, None, msg, QMessageBox.Ok)
-        self.showMessage(msg)
+        self.show_message(msg)
 
     def askdirectory(self):
         if self.ims is not None:
@@ -392,18 +392,20 @@ class MainWindowUI:
         self.imagedir = Path(dirs)
         self.roijsonfile = None
         self.jpgfilenamelist = []
-        self.showMessage(f"[SYSTEM] The directory is selected at: {str(self.imagedir)}")
-        for file in fileScanner(self.imagedir):
+        self.show_message(
+            f"[SYSTEM] The directory is selected at: {str(self.imagedir)}"
+        )
+        for file in glob_files(self.imagedir):
             if file.name.endswith((".jpg", ".jpeg")):
                 self.jpgfilenamelist.append(file.name)
             elif file.name.endswith(".json"):
                 self.roijsonfile = file.path
-                self.showMessage(f"[SYSTEM] Find a JSON file: {file.name}")
+                self.show_message(f"[SYSTEM] Find a JSON file: {file.name}")
 
         if len(self.jpgfilenamelist) > 0:
             if not self.ims:
                 self.ims = Imagestack(self)
-            self.showMessage(f"Image numbers: {len(self.jpgfilenamelist):d}")
+            self.show_message(f"Image numbers: {len(self.jpgfilenamelist):d}")
             self.ims.setdir(self.imagedir, self.jpgfilenamelist)
             self.endslice = len(self.jpgfilenamelist) - 1
             self.spinBox_start.setValue(0)
@@ -416,7 +418,7 @@ class MainWindowUI:
             self.horizontalSlider_y.setMaximum(max_y)
             self.spinBox_end.setValue(len(self.jpgfilenamelist) - 1)
         else:
-            self.showMessage("[SYSTEM] The directory does not have any jpg files")
+            self.show_message("[SYSTEM] The directory does not have any jpg files")
         self.update
 
     def doubleSpinBox_value_update(self, **kwargs):
@@ -525,18 +527,18 @@ class MainWindowUI:
                 self.outputdata, columns=["Area" for a in range(self.roicol.getlen())]
             )
             df.to_csv(os.path.join(self.imagedir, "area.csv"), index=False)
-            self.showMessage("[SYSTEM] area.csv was saved at %s" % self.imagedir)
+            self.show_message("[SYSTEM] area.csv was saved at %s" % self.imagedir)
 
         if self.roicol is not None:
             if len(self.roicol.roidict) != 0:
                 try:
                     jsonpath = os.path.join(self.imagedir, "Roi.json")
                     dump_json(jsonpath, self.roicol.roidict)
-                    self.showMessage(
+                    self.show_message(
                         "[SYSTEM] Roi.json was saved at %s" % self.imagedir
                     )
                 except Exception as e:
-                    self.showMessage("[ERROR] %s" % e)
+                    self.show_message("[ERROR] %s" % e)
 
     def showprocesswindow(self):
         self.startslice = int(self.spinBox_start.value())
@@ -583,7 +585,7 @@ class MainWindowUI:
                                    threshold = self.threshold)
             #self.ip = Imageprocess(self, save = True)
             """
-            self.showMessage("[SYSTEM] Processing...")
+            self.show_message("[SYSTEM] Processing...")
             self.showprocesswindow()
             self.outputdata = None
             self.ip.start()

@@ -45,7 +45,7 @@ class Contrast:
         if self.min != 0 or self.max != 255:
             self.drawaline()
 
-    def showImage(self):
+    def show_image(self):
         tempimage = getattr(self, "tempimage", None)
         if isinstance(tempimage, np.ndarray):
             cv2.imshow("image", self.changecontrast(tempimage))
@@ -56,7 +56,7 @@ class Contrast:
         if self.max > v:
             self.min = v
             self.drawaline()
-            self.showImage()
+            self.show_image()
 
     def setmax(self, v):
         self.adjusted = True
@@ -64,7 +64,7 @@ class Contrast:
         if v > self.min:
             self.max = v
             self.drawaline()
-            self.showImage()
+            self.show_image()
 
     def drawaline(self):
         histimage = getattr(self, "histimage", None)

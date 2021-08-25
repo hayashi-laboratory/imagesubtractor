@@ -18,11 +18,11 @@ def dump_json(path: str, data: dict):
         json.dump(data, file, indent=4)
 
 
-def getTime() -> str:
+def get_time() -> str:
     return datetime.datetime.now().strftime("%Y%m%d_%H:%M:%S")
 
 
-def fileScanner(path):
+def glob_files(path):
     with os.scandir(path) as dircontents:
         for file in dircontents:
             if not file.is_file() or file.name.startswith("."):
