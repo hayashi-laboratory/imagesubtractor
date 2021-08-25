@@ -554,11 +554,13 @@ class MainWindowUI:
         cv2.createTrackbar(
             "slice", self.subtwindowname, 0, self.endslice, self.showsubtmedimg
         )
+        pre_normalized = self.checkBox_prenormalized.isChecked()
         self.ip = Imageprocess(
             self,
             windowname=self.subtwindowname,
             threshold=self.threshold,
             slicestep=self.slicestep,
+            normalized=pre_normalized,
         )
 
     def startprocess(self):
@@ -600,9 +602,8 @@ class MainWindowUI:
             if n < self.ims.nslice - 1:
                 prenorm = self.checkBox_prenormalized.isChecked()
                 subtractor = Subtractor(prenorm)
-                img1 = self.ims[n].astype(np.float32)
-                img2 = self.ims[n + 1].astype(np.float32)
-                subimage = subtractor.subtract(img1, img2)
+                subtractor.setinitialimage(self.ims[n])
+                subimage = subtractor.subtractfromholdingimage(self.ims[n + 1])
                 subtmedimg = cv2.medianBlur(subimage, 5)
                 # print(subtmedimg.shape)#(768,1024,3)
                 olimg = self.overlaythreshold(subtmedimg, self.threshold)
@@ -616,11 +617,11 @@ class MainWindowUI:
         # print(threshold)
         retval, binaryimg = cv2.threshold(
             img[:, :, 2], threshold, 1, cv2.THRESH_BINARY_INV
-        ).astype(bool)
+        )
         # mask = cv2.inRange(img, np.array([0,0,0]),np.array([val,val,val]))
         # red channel =2, green =1, blue = 0
         # colimg[:,:,2][binaryimg == 1] = 255
-        img[:, :, 2][binaryimg] = 255
+        img[:, :, 2][binaryimg.astype(bool)] = 255
         # colimg[:,:,2][img[:,:,2] < threshold] = 255
         # colimg[img < val] = [[[0,0,255]]]
         # return colimg + img

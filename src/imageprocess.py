@@ -1,10 +1,11 @@
 import os
 import threading
+from multiprocessing import Queue
 
 import cv2
 import numpy as np
 
-from .subtractor import Subtractor
+from .parallel_subtractor import ParallelSubtractor
 from .utils import getTime
 
 
@@ -15,23 +16,24 @@ class Imageprocess(threading.Thread):
         saveflag=False,
         threshold=2,
         slicestep=1,
+        normalized=False,
         windowname="subtmed",
         **kwargs,
     ):
         super().__init__(daemon=True)
         self.ipg = ipg
         self.imagestack = getattr(self.ipg, "ims", None)
-        assert self.imagestack is not None, ""
+        assert self.imagestack is not None, "[ERROR] Fail to load imagestack"
         self.saveflag = saveflag
         self.threshold = threshold
         self.slicestep = slicestep
+        self.normalized = normalized
         self.windowname = windowname
 
         cv2.startWindowThread()
-        cv2.namedWindow(self.windowname, cv2.WINDOW_NORMAL)
         self.startslice = self.ipg.startslice
-        self.endtslice = self.ipg.endslice
-        self.processnum = (self.endtslice - self.startslice) // (self.slicestep)
+        self.endslice = self.ipg.endslice
+        self.processnum = (self.endslice - self.startslice) // (self.slicestep)
         self.output = np.zeros(
             (self.processnum, self.ipg.roicol.getlen()), dtype=np.int
         )
@@ -40,45 +42,49 @@ class Imageprocess(threading.Thread):
     def nothing(self, n):
         pass
 
-    def batch(img1, img2, subtractor):
-        pass
-
     def run(self):
-        start = getTime()
-        print(f"[SYSTEM] Start at: {start}")
-        subtractor = Subtractor()
-        subtractor.setinitialimage(self.image1)
-
-        for i in range(self.processnum):
-            currentslice = int(self.startslice + i * self.slicestep)
-            nextimg = self.imagestack[currentslice + int(1 * self.slicestep)]
-            subimage = subtractor.subtractfromholdingimage(nextimg)
-            subtractor.set2ndimageas1st()
-            # on imagej macro run("Median...", "radius=2");
-            # it may coresspond with 3? no. it seems imagejs radian =1
-            # so need 6?odd5 or rgb 9?
-            # 5 seems closer to imagej radian=2. looks differennt algorism.
-            # so may not able to give same result.
-            subtmedimg = cv2.medianBlur(subimage, 5)
-            # subimage = self.subtract(currentslice,currentslice+1)
+        print(f"[SYSTEM] Start at: {getTime()}")
+        output_queue = Queue()
+        subtractors = ParallelSubtractor(
+            self.startslice,
+            self.endslice,
+            self.slicestep,
+            self.imagestack,
+            output_queue,
+            self.normalized,
+            daemon=True,
+        )
+        subtractors.start()
+        # namedWindow after processing
+        cv2.namedWindow(self.windowname, cv2.WINDOW_NORMAL)
+        # this is for opencv imshow
+        counter = 0
+        tempdict = dict()
+        while True:
+            i, subtmedimg, binaryimg = output_queue.get()
+            tempdict[i] = subtmedimg
+            if i is None:
+                break
             if self.saveflag == True:
                 self.saveaimage(subtmedimg, i)
-            cv2.imshow(self.windowname, subtmedimg)
-
-            cv2.setTrackbarPos("slice", self.windowname, i)
-
-            # 3sd 127-3*12.7
-            threshold = 127 - self.threshold * 12.8
-            retval, binaryimg = cv2.threshold(
-                subtmedimg, threshold, 1, cv2.THRESH_BINARY_INV
-            )
-
             # here must have roi processing part
             areadata = self.ipg.roicol.measureareas(binaryimg)
             self.output[i, :] = areadata
-        end = getTime()
+
+            if counter in tempdict:
+                cv2.imshow(self.windowname, tempdict.pop(counter))
+                cv2.setTrackbarPos("slice", self.windowname, counter)
+                counter += 1
+
+        # imshow remain images
+        while counter in tempdict:
+            cv2.imshow(self.windowname, tempdict.pop(counter))
+            cv2.setTrackbarPos("slice", self.windowname, counter)
+            counter += 1
+
         self.ipg.outputdata = self.output
         self.ipg.savedata()
+        print(f"[SYSTEM] End at: {getTime()}")
 
     def saveaimage(self, img, num):
         # filename="".join([datetime.datetime.now().strftime('%Y%m%d%H%M%S_%f'),'.jpg'])
