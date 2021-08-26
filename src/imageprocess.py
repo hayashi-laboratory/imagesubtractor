@@ -5,7 +5,7 @@ from multiprocessing import Queue
 import cv2
 import numpy as np
 
-from roicollection import Roicollection
+from .roicollection import Roicollection
 
 from .parallel_subtractor import ParallelSubtractor
 from .utils import get_time

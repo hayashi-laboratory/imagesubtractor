@@ -3,7 +3,6 @@ import os.path as osp
 import threading
 import multiprocessing as mp
 
-from roicollection import Roicollection
 from .subtractor import SubtractorWorker
 from .imagestack import Imagestack
 

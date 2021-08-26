@@ -55,7 +55,6 @@ class Imagestack:
     def __getitem__(self, n):
         # print("read image #"+str(n))
         imagepass = os.path.join(self.imagedir, self.imagenamelist[n])
-        self.slicepos = n
         return cv2.imread(imagepass)
 
     def showrois(self, rois):

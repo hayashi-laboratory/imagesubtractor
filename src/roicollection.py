@@ -66,7 +66,7 @@ class Roicollection:
             "radianrot": radianrot,
         }
         if self.upperobj.ims is not None:
-            ymax, xmax = self.upperobj.ims[0].shape[:2]
+            ymax, xmax = self.upperobj.ims[self.upperobj.ims.slicepos].shape[:2]
 
         xy_shift = np.expand_dims(np.array((x, y)), 1)
         rot_cos, rot_sin = np.cos(radianrot), np.sin(radianrot)

@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore
 from PyQt5.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -31,6 +32,14 @@ from .subtractor import Subtractor
 from .utils import dump_json, glob_files
 
 
+class MyWidget(QtWidgets.QWidget):
+    keyPressed = QtCore.pyqtSignal(int)
+
+    def keyPressEvent(self, event):
+        super(MyWidget, self).keyPressEvent(event)
+        self.keyPressed.emit(event.key())
+
+
 class MainWindowUI:
     # default gui values
     __droiwidth = 78  # roi width
@@ -49,8 +58,9 @@ class MainWindowUI:
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(640, 405)
         # set contral widget
-        self.centralwidget = QWidget(MainWindow)
+        self.centralwidget = MyWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
+        self.centralwidget.keyPressed.connect(self.on_key)
         # gui locker
         self.checkBox_lock = QCheckBox(self.centralwidget)
         self.checkBox_lock.setGeometry(QtCore.QRect(100, 10, 91, 25))
@@ -409,13 +419,7 @@ class MainWindowUI:
             self.ims.setdir(self.imagedir, self.jpgfilenamelist)
             self.endslice = len(self.jpgfilenamelist) - 1
             self.spinBox_start.setValue(0)
-
-            tempimage = self.ims[0]
-            max_y, max_x, _ = tempimage.shape
-            self.doubleSpinBox_x.setMaximum(max_x)
-            self.horizontalSlider_x.setMaximum(max_x)
-            self.doubleSpinBox_y.setMaximum(max_y)
-            self.horizontalSlider_y.setMaximum(max_y)
+            self.update_maximum_value(0)
             self.spinBox_end.setValue(len(self.jpgfilenamelist) - 1)
         else:
             self.show_message("[SYSTEM] The directory does not have any jpg files")
@@ -590,8 +594,6 @@ class MainWindowUI:
             self.outputdata = None
             self.ip.start()
             self.checkBox_lock.setCheckState(2)
-            # print(len(self.outputdata))
-            # self.ip.join()
 
     def showsubtmedimg(self, n):
         # if self.ip.is_alive():
@@ -629,3 +631,36 @@ class MainWindowUI:
         # colimg[img < val] = [[[0,0,255]]]
         # return colimg + img
         return img
+
+    def on_key(self, key):
+        if self.checkBox_lock.isChecked():
+            return
+
+        if key == QtCore.Qt.Key_Q:
+            self.close()
+            return
+        # test for a specific key
+        if key == QtCore.Qt.Key_O:
+            self.askdirectory()
+            return
+
+        if self.ims is not None:
+            if key == QtCore.Qt.Key_A:
+                increment = -1
+
+            if key == QtCore.Qt.Key_D:
+                increment = 1
+
+            self.ims.slicepos = (self.ims.slicepos + increment) % self.ims.nslice
+            cv2.setTrackbarPos("slice", self.ims.windowname, self.ims.slicepos)
+            self.ims.readaimage(self.ims.slicepos)
+            self.update_maximum_value(self.ims.slicepos)
+            return
+
+    def update_maximum_value(self, pos):
+        tempimage = self.ims[pos]
+        max_y, max_x, _ = tempimage.shape
+        self.doubleSpinBox_x.setMaximum(max_x)
+        self.horizontalSlider_x.setMaximum(max_x)
+        self.doubleSpinBox_y.setMaximum(max_y)
+        self.horizontalSlider_y.setMaximum(max_y)
