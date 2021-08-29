@@ -648,7 +648,7 @@ class MainWindowUI:
             if key == QtCore.Qt.Key_A:
                 increment = -1
 
-            if key == QtCore.Qt.Key_D:
+            elif key == QtCore.Qt.Key_D:
                 increment = 1
 
             self.ims.slicepos = (self.ims.slicepos + increment) % self.ims.nslice
