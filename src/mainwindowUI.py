@@ -144,12 +144,14 @@ class MainWindowUI:
         # roi columns number
         self.spinBox_columns = QSpinBox(self.centralwidget)
         self.spinBox_columns.setGeometry(QtCore.QRect(390, 10, 48, 25))
+        self.spinBox_columns.setMinimum(1)
         self.spinBox_columns.setValue(self.__droicolnum)
         self.spinBox_columns.setObjectName("spinBox_columns")
 
         # roi rows number
         self.spinBox_rows = QSpinBox(self.centralwidget)
         self.spinBox_rows.setGeometry(QtCore.QRect(390, 45, 48, 25))
+        self.spinBox_rows.setMinimum(1)
         self.spinBox_rows.setValue(self.__droirownum)
         self.spinBox_rows.setObjectName("spinBox_rows")
 
