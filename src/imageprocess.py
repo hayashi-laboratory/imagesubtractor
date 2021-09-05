@@ -54,8 +54,8 @@ class Imageprocess(threading.Thread):
             self.imagestack,
             output_queue,
             self.roicol.copy(),
+            self.threshold,
             self.normalized,
-            daemon=True,
         )
         subtractors.start()
         # namedWindow after processing
