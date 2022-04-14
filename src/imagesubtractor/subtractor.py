@@ -1,5 +1,5 @@
-import os.path as osp
 import multiprocessing as mp
+import os.path as osp
 
 import cv2
 import numpy as np
@@ -98,4 +98,4 @@ class SubtractorWorker(mp.Process):
                 print("saved in", filepath)
 
             areadata = self.roicol.measureareas(binaryimg)
-            self.output_queue.put((num, subtmedimg,areadata))
+            self.output_queue.put((num, subtmedimg, areadata))

@@ -18,9 +18,33 @@ Refactored on Thu Jun 17 12:43:46 2020
 @author: Kuan
 """
 
+import os
 import sys
+from pathlib import Path
 
-from imagesubtractor import main
+import PySide2
+
+os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.fspath(
+    Path(PySide2.__file__).resolve().parent / "Qt" / "plugins"
+)
+from PySide2 import QApplication
+import cv2
+
+from .mainwindow import MainWindow
+
+
+def main(argv):
+    try:
+        app = QApplication(argv)
+        appUI = MainWindow()
+        appUI.show()
+        appUI.raise_()
+        app.exec_()
+    finally:
+        cv2.waitKey(1)
+        cv2.destroyAllWindows()
+        cv2.waitKey(1)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

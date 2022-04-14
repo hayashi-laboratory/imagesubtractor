@@ -1,13 +1,13 @@
 import functools
 import os
 from pathlib import Path
-from typing import Any, Dict, NamedTuple
+from typing import Any, Dict
 
 import cv2
 import numpy as np
 import pandas as pd
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import (
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
@@ -57,12 +57,12 @@ def qlabel(parent, geometry, font, name) -> QLabel:
     return label
 
 
-class MyWidget(QtWidgets.QWidget):
-    keyPressed = QtCore.pyqtSignal(int)
+class MyWidget(QWidget):
+    keyPressed = QtCore.pyqtSignal(QtCore.QEvent)
 
     def keyPressEvent(self, event):
-        super(MyWidget, self).keyPressEvent(event)
-        self.keyPressed.emit(event.key())
+        super().keyPressEvent(event)
+        self.keyPressed.emit(event)
 
 
 class MainWindowUI:
@@ -85,7 +85,6 @@ class MainWindowUI:
         # set contral widget
         self.centralwidget = MyWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
-        self.centralwidget.keyPressed.connect(self.on_key)
         # gui locker
         self.checkBox_lock = QCheckBox(self.centralwidget)
         self.checkBox_lock.setGeometry(QtCore.QRect(100, 10, 91, 25))
@@ -325,6 +324,7 @@ class MainWindowUI:
         self.setup_widget_events(MainWindow)
 
     def setup_widget_events(self, MainWindow):
+        self.centralwidget.keyPressed.connect(self.on_key)
         # synchronize the left-top x and left-top y.
         self.doubleSpinBox_x.editingFinished.connect(self.horizontalSlider_value_update)
         self.doubleSpinBox_y.editingFinished.connect(self.horizontalSlider_value_update)
@@ -637,24 +637,24 @@ class MainWindowUI:
         # return colimg + img
         return img
 
-    def on_key(self, key):
+    def on_key(self, event):
         if self.checkBox_lock.isChecked():
             return
 
-        if key == QtCore.Qt.Key_Q:
+        if event.key() in (QtCore.Qt.Key_Q, QtCore.Qt.Key_Esc):
             self.close()
             return
         # test for a specific key
-        if key == QtCore.Qt.Key_O:
+        if event.key() == QtCore.Qt.Key_O:
             self.askdirectory()
             return
 
         if self.ims is not None:
             increment = 0
-            if key == QtCore.Qt.Key_A:
+            if event.key() == QtCore.Qt.Key_A:
                 increment = -1
 
-            elif key == QtCore.Qt.Key_D:
+            elif event.key() == QtCore.Qt.Key_D:
                 increment = 1
 
             self.ims.slicepos = (self.ims.slicepos + increment) % self.ims.nslice

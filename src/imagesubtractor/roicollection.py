@@ -1,5 +1,5 @@
-from collections import UserList
 import functools
+from collections import UserList
 from typing import Dict, List, Optional
 
 import cv2

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow
+from PySide2.QtWidgets import QMainWindow
 
 from .mainwindowUI import MainWindowUI
 

@@ -15,7 +15,7 @@ dependencies = [
             "pandas",
             "numpy",
             "dataclasses",
-            "pyqt5",
+            "PySide2",
 ]
 [project.urls]
 Home = "https://github.com/lycantrope/imagesubtractor"
