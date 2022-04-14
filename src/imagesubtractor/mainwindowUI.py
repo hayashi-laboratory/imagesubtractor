@@ -1,12 +1,12 @@
 import functools
 import os
 from pathlib import Path
+from typing import Any, Dict, NamedTuple
 
 import cv2
 import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5 import QtCore
 from PyQt5.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -27,9 +27,34 @@ from PyQt5.QtWidgets import (
 
 from .imageprocess import Imageprocess
 from .imagestack import Imagestack
-from .roicollection import Roicollection
+from .parallel_subtractor import ParallelSubtractor
+from .roicollection import RoiCollection
 from .subtractor import Subtractor
 from .utils import dump_json, glob_files
+
+
+def qfont(
+    fonttype="Helvetica",
+    pointsize=None,
+    bold=None,
+    weight=None,
+) -> QtGui.QFont:
+    font = QtGui.QFont(fonttype)
+    if pointsize is not None:
+        font.setPointSize(pointsize)
+    if bold is not None:
+        font.setBold(bold)
+    if weight is not None:
+        font.setWeight(weight)
+    return font
+
+
+def qlabel(parent, geometry, font, name) -> QLabel:
+    label = QLabel(parent)
+    label.setGeometry(QtCore.QRect(*geometry))
+    label.setFont(font)
+    label.setObjectName(name)
+    return label
 
 
 class MyWidget(QtWidgets.QWidget):
@@ -64,19 +89,17 @@ class MainWindowUI:
         # gui locker
         self.checkBox_lock = QCheckBox(self.centralwidget)
         self.checkBox_lock.setGeometry(QtCore.QRect(100, 10, 91, 25))
-        self.checkBox_lock.setFont(self.getFont(pointsize=12, bold=False, weight=50))
+        self.checkBox_lock.setFont(qfont(pointsize=12, bold=False, weight=50))
         self.checkBox_lock.setObjectName("checkBox_lock")
 
         self.checkBox_json = QCheckBox(self.centralwidget)
         self.checkBox_json.setGeometry(QtCore.QRect(100, 50, 91, 25))
-        self.checkBox_json.setFont(self.getFont(pointsize=12, bold=False, weight=50))
+        self.checkBox_json.setFont(qfont(pointsize=12, bold=False, weight=50))
         self.checkBox_json.setObjectName("json")
 
         self.checkBox_prenormalized = QCheckBox(self.centralwidget)
         self.checkBox_prenormalized.setGeometry(QtCore.QRect(100, 90, 91, 25))
-        self.checkBox_prenormalized.setFont(
-            self.getFont(pointsize=12, bold=False, weight=50)
-        )
+        self.checkBox_prenormalized.setFont(qfont(pointsize=12, bold=False, weight=50))
         self.checkBox_prenormalized.setObjectName("prenormalized")
 
         # gui palette
@@ -96,31 +119,31 @@ class MainWindowUI:
         # open button
         self.pushButton_open = QPushButton(self.centralwidget)
         self.pushButton_open.setGeometry(QtCore.QRect(10, 10, 81, 57))
-        self.pushButton_open.setFont(self.getFont(bold=True, weight=75))
+        self.pushButton_open.setFont(qfont(bold=True, weight=75))
         self.pushButton_open.setObjectName("pushButton_open")
 
         # set_roi button
         self.pushButton_set_roi = QPushButton(self.centralwidget)
         self.pushButton_set_roi.setGeometry(QtCore.QRect(10, 75, 81, 57))
-        self.pushButton_set_roi.setFont(self.getFont(bold=True, weight=75))
+        self.pushButton_set_roi.setFont(qfont(bold=True, weight=75))
         self.pushButton_set_roi.setObjectName("pushButton_set_roi")
 
         # process_window button
         self.pushButton_process_window = QPushButton(self.centralwidget)
         self.pushButton_process_window.setGeometry(QtCore.QRect(10, 235, 101, 57))
-        self.pushButton_process_window.setFont(self.getFont(bold=True, weight=75))
+        self.pushButton_process_window.setFont(qfont(bold=True, weight=75))
         self.pushButton_process_window.setObjectName("pushButton_process_window")
 
         # start process bottum
         self.pushButton_start_processing = QPushButton(self.centralwidget)
         self.pushButton_start_processing.setGeometry(QtCore.QRect(10, 300, 101, 57))
-        self.pushButton_start_processing.setFont(self.getFont(bold=True, weight=75))
+        self.pushButton_start_processing.setFont(qfont(bold=True, weight=75))
         self.pushButton_start_processing.setObjectName("pushButton_start_processing")
 
         # save process bottum
         self.pushButton_save = QPushButton(self.centralwidget)
         self.pushButton_save.setGeometry(QtCore.QRect(130, 300, 101, 57))
-        self.pushButton_save.setFont(self.getFont(bold=True, weight=75))
+        self.pushButton_save.setFont(qfont(bold=True, weight=75))
         self.pushButton_save.setObjectName("pushButton_save")
 
         # x-interval box
@@ -271,7 +294,7 @@ class MainWindowUI:
         self.spinBox_end.setMaximum(100000)
         self.spinBox_end.setObjectName("spinBox_end")
 
-        label_font = self.getFont(pointsize=10, bold=True, weight=75)
+        label_font = qfont(pointsize=10, bold=True, weight=75)
         self.label_geometries = [
             ("Width:", (190, 10, 43, 25)),
             ("Height:", (190, 45, 51, 25)),
@@ -291,12 +314,17 @@ class MainWindowUI:
         for i, (_, geo) in enumerate(self.label_geometries):
             name = f"label_{i}"
             setattr(
-                self, name, self.getLabel(self.centralwidget, geo, label_font, name)
+                self,
+                name,
+                qlabel(self.centralwidget, geo, label_font, name),
             )
 
         # format all buttons text
         self.retranslateUi(self)
 
+        self.setup_widget_events(MainWindow)
+
+    def setup_widget_events(self, MainWindow):
         # synchronize the left-top x and left-top y.
         self.doubleSpinBox_x.editingFinished.connect(self.horizontalSlider_value_update)
         self.doubleSpinBox_y.editingFinished.connect(self.horizontalSlider_value_update)
@@ -339,29 +367,11 @@ class MainWindowUI:
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def showNormState(self):
-        prenorm = self.checkBox_prenormalized.isChecked()
-        if prenorm:
+        msg = ""
+        if self.checkBox_prenormalized.isChecked():
             msg = "[SYSTEM] Images will be normalized before subtraction"
-            self.show_message(msg)
-        else:
-            self.show_message("")
 
-    def getFont(self, fonttype="Helvetica", pointsize=None, bold=None, weight=None):
-        font = QtGui.QFont(fonttype)
-        if pointsize is not None:
-            font.setPointSize(pointsize)
-        if bold is not None:
-            font.setBold(bold)
-        if weight is not None:
-            font.setWeight(weight)
-        return font
-
-    def getLabel(self, parent, geometry, font, name):
-        label = QLabel(parent)
-        label.setGeometry(QtCore.QRect(*geometry))
-        label.setFont(font)
-        label.setObjectName(name)
-        return label
+        self.show_message(msg)
 
     def retranslateUi(self, MainWindow):
         _translate = functools.partial(QtCore.QCoreApplication.translate, "MainWindow")
@@ -376,7 +386,6 @@ class MainWindowUI:
         self.pushButton_save.setText(_translate("Save"))
         self.menuImage_Processor.setTitle(_translate("Image Processor"))
 
-        # label text
         for i, (txt, _) in enumerate(self.label_geometries):
             name = f"label_{i}"
             getattr(self, name).setText(_translate(txt))
@@ -385,17 +394,16 @@ class MainWindowUI:
         QApplication.setStyle(QStyleFactory.create(styleName))
         QApplication.setPalette(self.originalPalette)
 
-    def show_message(self, msg):
+    def show_message(self, msg) -> "MainWindowUI":
         self.statusbar.showMessage(msg)
         print(msg)
+        return self
 
-    def showError(self, msg):
+    def showError(self, msg) -> "MainWindowUI":
         QMessageBox.information(self, None, msg, QMessageBox.Ok)
-        self.show_message(msg)
+        return self.show_message(msg)
 
-    def askdirectory(self):
-        if self.ims is not None:
-            self.ims.clear()
+    def askdirectory(self) -> "MainWindowUI":
         dialog = QFileDialog(self)
         dirs = dialog.getExistingDirectory()
         if not dirs:
@@ -408,24 +416,35 @@ class MainWindowUI:
             f"[SYSTEM] The directory is selected at: {str(self.imagedir)}"
         )
         for file in glob_files(self.imagedir):
-            if file.name.endswith((".jpg", ".jpeg")):
+            if file.name.lower().endswith((".jpg", ".jpeg")):
                 self.jpgfilenamelist.append(file.name)
             elif file.name.endswith(".json"):
                 self.roijsonfile = file.path
                 self.show_message(f"[SYSTEM] Find a JSON file: {file.name}")
+        self.jpgfilenamelist.sort()
+        if not len(self.jpgfilenamelist):
+            self.show_message(
+                "[SYSTEM] The directory does not have any jpg files"
+            ).update
+            return self
 
-        if len(self.jpgfilenamelist) > 0:
-            if not self.ims:
-                self.ims = Imagestack(self)
-            self.show_message(f"Image numbers: {len(self.jpgfilenamelist):d}")
-            self.ims.setdir(self.imagedir, self.jpgfilenamelist)
-            self.endslice = len(self.jpgfilenamelist) - 1
-            self.spinBox_start.setValue(0)
+        self.ims = Imagestack().setdir(self.imagedir, self.jpgfilenamelist)
+        (
             self.update_maximum_value(0)
-            self.spinBox_end.setValue(len(self.jpgfilenamelist) - 1)
-        else:
-            self.show_message("[SYSTEM] The directory does not have any jpg files")
-        self.update
+            .setup_process_boundary(len(self.jpgfilenamelist) - 1)
+            .setroi()
+            .show_message(f"Image numbers: {len(self.jpgfilenamelist):d}")
+        )
+
+        return self
+
+    def setup_process_boundary(self, totalnum: int) -> "MainWindowUI":
+        self.spinBox_start.setValue(0)
+        self.spinBox_end.setValue(totalnum)
+        self.spinBox_start.setMaximum(totalnum)
+        self.spinBox_end.setMaximum(totalnum)
+        self.spinBox_step.setMaximum(totalnum)
+        return self
 
     def doubleSpinBox_value_update(self, **kwargs):
         x = self.horizontalSlider_x.value()
@@ -461,11 +480,10 @@ class MainWindowUI:
             self.setroi()
         self.update
 
-    def setroi(self):
-        self.roicol = Roicollection(parent=self)
+    def setroi(self) -> "MainWindowUI":
         if self.checkBox_json.isChecked():
             if self.roijsonfile:
-                self.roicol.read_json(self.roijsonfile)
+                self.roicol = RoiCollection.from_json(self.roijsonfile)
                 roisarg = self.roicol.roidict.get("roisarg")
                 if roisarg:
                     roicolnum = int(roisarg["roicolnum"])
@@ -494,34 +512,31 @@ class MainWindowUI:
         else:
             # self.roilist = []
             # roi column num
-            roicolnum = int(self.spinBox_columns.value())
-            # roi row num
-            roirownum = int(self.spinBox_rows.value())
-            # roi interval x
-            roiintervalx = float(self.doubleSpinBox_x_interval.value())
-            # roi interval y
-            roiintervaly = float(self.doubleSpinBox_y_interval.value())
-            # topleft
-            x = int(self.doubleSpinBox_x.value())
-            y = int(self.doubleSpinBox_y.value())
-            width = int(self.doubleSpinBox_width.value())
-            height = int(self.doubleSpinBox_height.value())
-            radianrot = np.pi * float(self.doubleSpinBox_rotate.value()) / 180
+            roi_kws = self.get_rois_kws()
+            ymax, xmax = None, None
+            if self.ims:
+                ymax, xmax = self.ims[self.ims.slicepos].shape[:2]
 
-            roisarg = (
-                roicolnum,
-                roirownum,
-                roiintervalx,
-                roiintervaly,
-                x,
-                y,
-                width,
-                height,
-                radianrot,
-            )
-            self.roicol.setrois(*roisarg)
+            roi_kws.update(xmax=xmax, ymax=ymax)
+            self.roicol = RoiCollection().set_rois(**roi_kws)
+
         if self.ims:
             self.ims.showrois(self.roicol)
+
+        return self
+
+    def get_rois_kws(self) -> Dict[str, Any]:
+        return dict(
+            roicolnum=int(self.spinBox_columns.value()),
+            roirownum=int(self.spinBox_rows.value()),
+            roiintervalx=float(self.doubleSpinBox_x_interval.value()),
+            roiintervaly=float(self.doubleSpinBox_y_interval.value()),
+            x=int(self.doubleSpinBox_x.value()),
+            y=int(self.doubleSpinBox_y.value()),
+            box_width=int(self.doubleSpinBox_width.value()),
+            box_height=int(self.doubleSpinBox_height.value()),
+            radianrot=np.pi * float(self.doubleSpinBox_rotate.value()) / 180,
+        )
 
     def savedata(self):
         if self.imagedir is None:
@@ -529,29 +544,26 @@ class MainWindowUI:
             return
         if self.outputdata is not None:
             # np.savetxt(os.path.join(self.imagedir, "np_area.csv"), self.outputdata, delimiter = ",", fmt = "%d")
-            df = pd.DataFrame(
-                self.outputdata, columns=["Area" for a in range(self.roicol.getlen())]
-            )
+            df = pd.DataFrame(self.outputdata, columns=["Area"] * len(self.roicol))
             df.to_csv(os.path.join(self.imagedir, "area.csv"), index=False)
             self.show_message("[SYSTEM] area.csv was saved at %s" % self.imagedir)
 
         if self.roicol is not None:
-            if len(self.roicol.roidict) != 0:
-                try:
-                    jsonpath = os.path.join(self.imagedir, "Roi.json")
-                    dump_json(jsonpath, self.roicol.roidict)
-                    self.show_message(
-                        "[SYSTEM] Roi.json was saved at %s" % self.imagedir
-                    )
-                except Exception as e:
-                    self.show_message("[ERROR] %s" % e)
+            jsonpath = os.path.join(self.imagedir, "Roi.json")
+            dump_json(jsonpath, self.roicol.roidict)
+            self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)
 
-    def showprocesswindow(self):
-        self.startslice = int(self.spinBox_start.value())
-        self.endslice = int(self.spinBox_end.value())
-        self.threshold = float(self.doubleSpinBox_threshold.value())
-        self.slicestep = int(self.spinBox_step.value())
-        processnum = (self.endslice - self.startslice) // self.slicestep
+    def startprocess(self):
+        if not self.jpgfilenamelist:
+            return
+
+        self.show_message("[SYSTEM] Processing...")
+        startslice = int(self.spinBox_start.value())
+        endslice = int(self.spinBox_end.value())
+        threshold = float(self.doubleSpinBox_threshold.value())
+        slicestep = int(self.spinBox_step.value())
+        processnum = (endslice - startslice) // slicestep
+        pre_normalized = self.checkBox_prenormalized.isChecked()
 
         self.subtwindowname = "subtmed"
         cv2.startWindowThread()
@@ -560,63 +572,54 @@ class MainWindowUI:
             tempimage = self.ims[0]
             empty_img = np.zeros(tempimage.shape)
             cv2.imshow(self.subtwindowname, empty_img)
+
         cv2.createTrackbar(
-            "slice", self.subtwindowname, 0, processnum - 1, self.showsubtmedimg
+            "slice",
+            self.subtwindowname,
+            0,
+            processnum - 1,
+            self.showsubtmedimg,
         )
-        pre_normalized = self.checkBox_prenormalized.isChecked()
+
+        self.outputdata = np.zeros((processnum, len(self.roicol)), dtype=int)
+        subtractor = ParallelSubtractor().setup_workers(
+            image_queue=self.ims.get_image_queue(startslice, endslice, slicestep),
+            roicollection=self.roicol.copy(),
+            threshold=threshold,
+            normalized=self.checkBox_prenormalized.isChecked(),
+            saveflag=False,
+        )
         self.ip = Imageprocess(
             self,
-            windowname=self.subtwindowname,
-            threshold=self.threshold,
-            slicestep=self.slicestep,
+            winname=self.subtwindowname,
+            threshold=threshold,
+            slicestep=slicestep,
             normalized=pre_normalized,
-        )
-
-    def startprocess(self):
-        if self.jpgfilenamelist:
-            """
-            self.slicestartstr = self.boxstart.get()
-            self.sliceendstr = self.boxend.get()
-            self.startslice = int(self.slicestartstr)
-            self.endslice = int(self.sliceendstr)
-            print(str(self.startslice)+":"+str(self.endslice))
-            self.threshold = float(self.boxthreshold.get())
-
-            self.subtwindowname = "subtmed"
-            cv2.startWindowThread()
-            cv2.namedWindow(self.subtwindowname, cv2.WINDOW_NORMAL)
-            cv2.createTrackbar('slice',self.subtwindowname,
-                                  0,self.endslice, self.showsubtmedimg)
-            self.ip = Imageprocess(self, windowname = self.subtwindowname,
-                                   threshold = self.threshold)
-            #self.ip = Imageprocess(self, save = True)
-            """
-            self.show_message("[SYSTEM] Processing...")
-            self.showprocesswindow()
-            self.outputdata = None
-            self.ip.start()
-            self.checkBox_lock.setCheckState(2)
+        ).setup_parallel_subtractor(subtractor=subtractor, outputdata=self.outputdata)
+        self.ip.start()
+        self.checkBox_lock.setCheckState(2)
 
     def showsubtmedimg(self, n):
         # if self.ip.is_alive():
         #    print("ip is alive")
         # """
-        if not self.ip.is_alive():
-            # print("ip is Not alive")
-            self.threshold = float(self.doubleSpinBox_threshold.value())
-            # print(n)
-            # print(self.threshold)
-            if n < self.ims.nslice - 1:
-                prenorm = self.checkBox_prenormalized.isChecked()
-                subtractor = Subtractor(prenorm)
-                subtractor.setinitialimage(self.ims[n])
-                subimage = subtractor.subtractfromholdingimage(self.ims[n + 1])
-                subtmedimg = cv2.medianBlur(subimage, 5)
-                # print(subtmedimg.shape)#(768,1024,3)
-                olimg = self.overlaythreshold(subtmedimg, self.threshold)
-                # cv2.imshow(self.subtwindowname, subtmedimg)
-                cv2.imshow(self.subtwindowname, olimg)
-                # cv2.setTrackbarPos('slice',self.windowname,i)
+        if self.ip.is_alive():
+            return
+        # print("ip is Not alive")
+        self.threshold = float(self.doubleSpinBox_threshold.value())
+        # print(n)
+        # print(self.threshold)
+        if n < self.ims.nslice - 1:
+            prenorm = self.checkBox_prenormalized.isChecked()
+            subtractor = Subtractor(prenorm)
+            subtractor.setinitialimage(self.ims[n])
+            subimage = subtractor.subtractfromholdingimage(self.ims[n + 1])
+            subtmedimg = cv2.medianBlur(subimage, 5)
+            # print(subtmedimg.shape)#(768,1024,3)
+            olimg = self.overlaythreshold(subtmedimg, self.threshold)
+            # cv2.imshow(self.subtwindowname, subtmedimg)
+            cv2.imshow(self.subtwindowname, olimg)
+            # cv2.setTrackbarPos('slice',self.windowname,i)
 
     def overlaythreshold(self, img, val):
         # colimg = np.zeros(img.shape, dtype = np.uint8)
@@ -647,6 +650,7 @@ class MainWindowUI:
             return
 
         if self.ims is not None:
+            increment = 0
             if key == QtCore.Qt.Key_A:
                 increment = -1
 
@@ -654,15 +658,16 @@ class MainWindowUI:
                 increment = 1
 
             self.ims.slicepos = (self.ims.slicepos + increment) % self.ims.nslice
-            cv2.setTrackbarPos("slice", self.ims.windowname, self.ims.slicepos)
+            cv2.setTrackbarPos("slice", self.ims.winname, self.ims.slicepos)
             self.ims.readaimage(self.ims.slicepos)
             self.update_maximum_value(self.ims.slicepos)
             return
 
-    def update_maximum_value(self, pos):
+    def update_maximum_value(self, pos: int) -> "MainWindowUI":
         tempimage = self.ims[pos]
-        max_y, max_x, _ = tempimage.shape
+        max_y, max_x = tempimage.shape[:2]
         self.doubleSpinBox_x.setMaximum(max_x)
         self.horizontalSlider_x.setMaximum(max_x)
         self.doubleSpinBox_y.setMaximum(max_y)
         self.horizontalSlider_y.setMaximum(max_y)
+        return self

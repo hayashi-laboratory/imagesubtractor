@@ -24,7 +24,7 @@ import sys
 import cv2
 from PyQt5.QtWidgets import QApplication
 
-from src.mainwindow import MainWindow
+from imagesubtractor.mainwindow import MainWindow
 
 
 def main(args):

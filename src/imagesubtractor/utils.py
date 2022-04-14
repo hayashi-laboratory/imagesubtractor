@@ -1,19 +1,20 @@
 import os
 import json
 import datetime
+from typing import Dict
 
 
-def load_json(path: str) -> dict:
+def load_json(path: str) -> Dict:
     json_dict = None
     try:
-        with open(str(path), mode="r") as jsonfile:
-            json_dict = json.load(jsonfile)
+        with open(path, mode="r") as file:
+            json_dict = json.load(file)
         return json_dict
     except Exception as e:
         print("[ERROR] %s" % e)
 
 
-def dump_json(path: str, data: dict):
+def dump_json(path: str, data: dict)->None:
     with open(path, mode="w") as file:
         json.dump(data, file, indent=4)
 
