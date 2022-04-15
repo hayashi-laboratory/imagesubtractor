@@ -15,7 +15,6 @@ class Imageprocess(threading.Thread):
     ):
         super().__init__(daemon=True)
         self.winname = winname
-        cv2.startWindowThread()
 
     def nothing(self, n):
         pass

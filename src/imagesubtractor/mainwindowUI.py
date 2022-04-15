@@ -57,12 +57,15 @@ def qlabel(parent, geometry, font, name) -> QLabel:
     return label
 
 
-class MyWidget(QWidget):
-    keyPressed = QtCore.pyqtSignal(QtCore.QEvent)
+# class MyWidget(QtWidgets.QWidget):
+#     keyPressed = QtCore.Signal(QtCore.QEvent)
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#         #self.keyPressed = QtCore.SignalInstance(int)
 
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-        self.keyPressed.emit(event)
+#     def keyPressEvent(self, event):
+#         super().keyPressEvent(event)
+#         self.keyPressed.emit(event)
 
 
 class MainWindowUI:
@@ -83,7 +86,7 @@ class MainWindowUI:
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(640, 405)
         # set contral widget
-        self.centralwidget = MyWidget(MainWindow)
+        self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         # gui locker
         self.checkBox_lock = QCheckBox(self.centralwidget)
@@ -324,7 +327,7 @@ class MainWindowUI:
         self.setup_widget_events(MainWindow)
 
     def setup_widget_events(self, MainWindow):
-        self.centralwidget.keyPressed.connect(self.on_key)
+        #self.centralwidget.keyPressed.connect(self.on_key)
         # synchronize the left-top x and left-top y.
         self.doubleSpinBox_x.editingFinished.connect(self.horizontalSlider_value_update)
         self.doubleSpinBox_y.editingFinished.connect(self.horizontalSlider_value_update)
@@ -566,7 +569,6 @@ class MainWindowUI:
         pre_normalized = self.checkBox_prenormalized.isChecked()
 
         self.subtwindowname = "subtmed"
-        cv2.startWindowThread()
         cv2.namedWindow(self.subtwindowname, cv2.WINDOW_NORMAL)
         if self.ims is not None:
             tempimage = self.ims[0]

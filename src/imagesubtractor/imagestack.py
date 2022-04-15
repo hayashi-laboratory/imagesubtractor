@@ -14,12 +14,10 @@ class Imagestack:
         self.winname = "image"
 
     def setdir(self, imagedir: str, imagenamelist: List[str]) -> "Imagestack":
-        self.clear()
         self.imagedir = imagedir
         self.imagenamelist = imagenamelist
         self.nslice = len(self.imagenamelist)
         self.slicepos = 0
-        cv2.startWindowThread()
         # WINDOW_NORMAL  need to make flexible size window
         # cv2.namedWindow(self.windowname, cv2.WINDOW_NORMAL)
         cv2.namedWindow(self.winname, cv2.WINDOW_NORMAL + cv2.WINDOW_FREERATIO)
@@ -28,11 +26,6 @@ class Imagestack:
         cv2.createTrackbar("slice", self.winname, 0, self.nslice - 1, self.readaimage)
         return self
 
-    def clear(self):
-        self.imagedir = None
-        self.imagenamelist = list()
-        self.nslice = None
-        cv2.destroyAllWindows()
 
     # the n start from 0. not 1
     def readaimage(self, n):
