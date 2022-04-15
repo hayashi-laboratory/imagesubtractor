@@ -13,7 +13,7 @@ This application is code refactoring from `imagesubtandmeasure.py` that created 
 - opencv-python <= 4.5.1.48
 - pandas
 - numpy
-- pyqt5
+- PySide2
 
 ### Using pip
 
@@ -33,19 +33,19 @@ conda create --file requirements.yaml
 
 ```shell
 conda activate imagesubtractor
-python main.py
+python app.py
 ```
 
 ### pip environment (Linux/mac)
 
 ```shell
 source ./bin/activate
-python main.py
+python app.py
 ```
 
 ### pip environment (Windows)
 
 ```shell
 .\Scripts\activate.bat
-python main.py
+python app.py
 ```

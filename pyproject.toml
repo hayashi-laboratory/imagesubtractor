@@ -19,3 +19,6 @@ dependencies = [
 ]
 [project.urls]
 Home = "https://github.com/lycantrope/imagesubtractor"
+
+[project.scripts]
+imagesubtractor = "imagesubtractor.app:main"
