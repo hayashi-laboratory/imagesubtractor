@@ -1,7 +1,20 @@
-import os
-import json
 import datetime
-from typing import Dict
+import json
+import os
+import time
+from contextlib import contextmanager
+from typing import Callable, Dict
+
+
+@contextmanager
+def timer(display: Callable = None):
+    if not callable(display):
+        display = print
+    t1 = time.perf_counter()
+    display(f"[SYSTEM] Start at: {get_time()}")
+    yield
+    display(f"[SYSTEM] End at: {get_time()}")
+    display(f"[SYSTEM] Elapse: {time.perf_counter() - t1:.2f} (Sec)")
 
 
 def load_json(path: str) -> Dict:
@@ -14,7 +27,7 @@ def load_json(path: str) -> Dict:
         print("[ERROR] %s" % e)
 
 
-def dump_json(path: str, data: dict)->None:
+def dump_json(path: str, data: dict) -> None:
     with open(path, mode="w") as file:
         json.dump(data, file, indent=4)
 

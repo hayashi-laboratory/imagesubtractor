@@ -8,12 +8,8 @@ class Contrast:
         self.imgwidth = 256
         self.min = 0
         self.max = 255
-        self.winname = "contrast"
         self.image_raw = None
         self.histimage = None
-        cv2.namedWindow(self.winname)
-        cv2.createTrackbar("min", self.winname, 0, 255, self.setmin)
-        cv2.createTrackbar("max", self.winname, 255, 255, self.setmax)
 
     @property
     def adjusted(self) -> bool:
@@ -33,7 +29,6 @@ class Contrast:
         cv2.fillPoly(histimagesorce, [points], (255, 255, 255))
         self.histimage = np.flipud(histimagesorce).astype(np.uint8)
 
-        cv2.imshow(self.winname, self.histimage)
 
         if self.min != 0 or self.max != 255:
             self.drawaline()
