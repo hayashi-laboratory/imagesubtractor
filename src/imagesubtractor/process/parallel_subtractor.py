@@ -1,41 +1,45 @@
 import multiprocessing as mp
 import os
 import threading
-from typing import Tuple
 
-import numpy as np
+
+from .queue_item import Result
 
 from .roicollection import RoiCollection
-from .subtractor import Subtractor, SubtractorWorker
+from .subtractor import Subtractor
+from .worker import SubtractorWorker
+
+
+__all__ = ["ParallelSubtractor"]
 
 
 class ParallelSubtractor(threading.Thread):
     def __init__(
         self,
-        num_workers: int = os.cpu_count() // 2,
+        num_workers: int = min(os.cpu_count(), 4),
     ):
         super().__init__(daemon=True)
-        self.output_queue = mp.Queue()
+        self.output_queue: mp.Queue = mp.Queue()
         self.num_workers = num_workers
         self.workers = []
 
     def setup_workers(
         self,
-        image_queue: mp.Queue,
+        processnum: int,
+        task: mp.Queue,
         roicollection: RoiCollection,
         threshold: float,
         normalized: bool,
         saveflag: bool = False,
     ) -> "ParallelSubtractor":
-        if self.output_queue is None:
-            raise ValueError("output_queue is not set, please run setup_output ")
+
+        self.processnum = processnum
         self.workers = [
             SubtractorWorker(
-                image_queue,
+                task,
                 self.output_queue,
                 roicollection,
-                threshold=threshold,
-                subtractor=Subtractor(normalized),
+                subtractor=Subtractor(threshold, normalized),
                 saveflag=saveflag,
             )
             for _ in range(self.num_workers)
@@ -47,9 +51,9 @@ class ParallelSubtractor(threading.Thread):
             p.start()
         for p in self.workers:
             p.join()
-        self.output_queue.put((None, None, None))
+        self.output_queue.put(Result())
 
-    def retrieve(self) -> Tuple[int, np.ndarray, np.ndarray]:
+    def retrieve(self) -> Result:
         return self.output_queue.get()
 
     def empty(self) -> bool:

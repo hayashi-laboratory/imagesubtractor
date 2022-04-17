@@ -23,6 +23,7 @@ import sys
 
 from PySide2.QtCore import QLibraryInfo
 from PySide2.QtWidgets import QApplication
+import cv2
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath

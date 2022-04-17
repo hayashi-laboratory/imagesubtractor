@@ -4,8 +4,10 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
+from ..utils import load_json
 from .roi import Roi
-from .utils import load_json
+
+__all__ = ["RoiCollection"]
 
 
 class RoiCollection(UserList):
@@ -81,7 +83,6 @@ class RoiCollection(UserList):
     def draw_a_roi(self, image: np.ndarray, roi: Roi) -> np.ndarray:
         return roi.show(image)
 
-    # the img must be binary. 0 or 1
     def measureareas(self, img):
         return np.fromiter((roi.measurearea(img) for roi in self.data), int)
 

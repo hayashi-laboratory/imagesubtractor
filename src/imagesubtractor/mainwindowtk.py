@@ -4,10 +4,8 @@ from pathlib import Path
 from tkinter import filedialog
 from typing import NamedTuple, Optional
 
-from imagesubtractor.parallel_subtractor import ParallelSubtractor
-from imagesubtractor.roicollection import RoiCollection
+from .process import ParallelSubtractor, RoiCollection, Imagestack
 
-from imagesubtractor.imagestack import Imagestack
 
 class RoiDefault(NamedTuple):
     box_width:int =100
@@ -25,17 +23,20 @@ class MainFrameTk(tk.Frame):
     droi = RoiDefault()
     def __init__(self, master=None):
         super().__init__(master)
+        self.rowconfigure(index = 0,weight= 10)
+        self.columnconfigure(index = 0,weight= 10)
         self.grid()
         self.stack:Optional[Imagestack] = None
         self.master.title("Imagesubtractor")
         self.setup_frame_size()
         self.createWidgets()
     
+
     def createWidgets(self):
         self.openBtn = tk.Button(self, text = "Open", command = self.ask_directory)
-        self.openBtn.grid()
+        self.openBtn.grid(row = 0, column = 0, rowspan=2, columnspan=2)
         self.saveBtn = tk.Button(self, text = "Save", command= self.save_data)
-        self.saveBtn.grid()
+        self.saveBtn.grid(row = 0, column = 2, rowspan=2, columnspan=2)
 
     def setup_frame_size(self):
         WIDTH, HEIGHT = 600, 400
@@ -45,7 +46,7 @@ class MainFrameTk(tk.Frame):
         self.update()
 
     def ask_directory(self):
-        homedir = filedialog.askdirectory(initialdir=os.getcwd())
+        homedir = filedialog.askdirectory(initialdir=os.path.join(os.getcwd(), "images"))
         if not homedir:
             return
         homedir = Path(homedir).resolve()
