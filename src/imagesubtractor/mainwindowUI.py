@@ -1,11 +1,14 @@
+from datetime import timedelta
 import functools
 import os
 from pathlib import Path
-from typing import Any, Dict
+import time
+from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtWidgets import (
     QApplication,
@@ -25,12 +28,15 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 
-from .imageprocess import Imageprocess
-from .imagestack import Imagestack
-from .parallel_subtractor import ParallelSubtractor
-from .roicollection import RoiCollection
-from .subtractor import Subtractor
-from .utils import dump_json, glob_files
+from .process import (
+    Imageprocess,
+    Imagestack,
+    ParallelSubtractor,
+    RoiCollection,
+    Subtractor,
+)
+from .processwindow import ProcessWindow
+from .utils import dump_json, get_time
 
 
 def qfont(
@@ -84,25 +90,32 @@ class MainWindowUI:
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(640, 405)
+        MainWindow.resize(640, 410)
         # set contral widget
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         # gui locker
         self.checkBox_lock = QCheckBox(self.centralwidget)
-        self.checkBox_lock.setGeometry(QtCore.QRect(100, 10, 91, 25))
-        self.checkBox_lock.setFont(qfont(pointsize=12, bold=False, weight=50))
+
+        # QtCore.QRect(100, 10, 91, 30)
+        self.checkBox_lock.setGeometry(QtCore.QRect(100, 90, 50, 25))
+        self.checkBox_lock.setFont(qfont(pointsize=10, bold=False, weight=60))
         self.checkBox_lock.setObjectName("checkBox_lock")
-
+        # tCore.QRect(100, 50, 91, 30)
         self.checkBox_json = QCheckBox(self.centralwidget)
-        self.checkBox_json.setGeometry(QtCore.QRect(100, 50, 91, 25))
-        self.checkBox_json.setFont(qfont(pointsize=12, bold=False, weight=50))
+        self.checkBox_json.setGeometry(QtCore.QRect(150, 90, 50, 25))
+        self.checkBox_json.setFont(qfont(pointsize=10, bold=False, weight=60))
         self.checkBox_json.setObjectName("json")
-
+        # QtCore.QRect(100, 90, 120, 25)
         self.checkBox_prenormalized = QCheckBox(self.centralwidget)
-        self.checkBox_prenormalized.setGeometry(QtCore.QRect(100, 90, 91, 25))
-        self.checkBox_prenormalized.setFont(qfont(pointsize=12, bold=False, weight=50))
+        self.checkBox_prenormalized.setGeometry(QtCore.QRect(200, 90, 120, 25))
+        self.checkBox_prenormalized.setFont(qfont(pointsize=10, bold=False, weight=60))
         self.checkBox_prenormalized.setObjectName("prenormalized")
+        # QtCore.QRect(100, 130, 91, 30)
+        self.checkBox_sub = QCheckBox(self.centralwidget)
+        self.checkBox_sub.setGeometry(QtCore.QRect(320, 90, 120, 25))
+        self.checkBox_sub.setFont(qfont(pointsize=10, bold=False, weight=60))
+        self.checkBox_sub.setObjectName("checkBox_sub")
 
         # gui palette
         self.originalPalette = QApplication.palette()
@@ -261,10 +274,16 @@ class MainWindowUI:
 
         self.doubleSpinBox_threshold = QDoubleSpinBox(self.centralwidget)
         self.doubleSpinBox_threshold.setGeometry(QtCore.QRect(420, 275, 68, 25))
-        self.doubleSpinBox_threshold.setMaximum(255)
+        self.doubleSpinBox_threshold.setMinimum(-10)
+        self.doubleSpinBox_threshold.setSingleStep(0.01)
+        self.doubleSpinBox_threshold.setMaximum(10)
         self.doubleSpinBox_threshold.setValue(self.__dthreshold)
-        self.doubleSpinBox_threshold.setDecimals(0)
+        self.doubleSpinBox_threshold.setDecimals(2)
         self.doubleSpinBox_threshold.setObjectName("doubleSpinBox_threshold")
+
+        self.view = ProcessWindow(self, 1000)
+        self.view.setGeometry(QtCore.QRect(640, 20, 300, 400))
+        self.view.setObjectName("view")
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -327,7 +346,7 @@ class MainWindowUI:
         self.setup_widget_events(MainWindow)
 
     def setup_widget_events(self, MainWindow):
-        #self.centralwidget.keyPressed.connect(self.on_key)
+        # self.centralwidget.keyPressed.connect(self.on_key)
         # synchronize the left-top x and left-top y.
         self.doubleSpinBox_x.editingFinished.connect(self.horizontalSlider_value_update)
         self.doubleSpinBox_y.editingFinished.connect(self.horizontalSlider_value_update)
@@ -360,7 +379,7 @@ class MainWindowUI:
 
         # lock all buttons except lock buttom
         for obj in self.findChild(QWidget).children():
-            if "checkBox_lock" in obj.objectName():
+            if "checkBox_lock" in obj.objectName() or "view" in obj.objectName():
                 continue
             self.checkBox_lock.toggled.connect(obj.setDisabled)
 
@@ -382,6 +401,7 @@ class MainWindowUI:
         self.checkBox_lock.setText(_translate("Lock"))
         self.checkBox_json.setText(_translate("Roi"))
         self.checkBox_prenormalized.setText(_translate("Pre-normalized"))
+        self.checkBox_sub.setText(_translate("show subtract"))
         self.pushButton_open.setText(_translate("Open"))
         self.pushButton_set_roi.setText(_translate("Set Roi"))
         self.pushButton_process_window.setText(_translate("Process\n" "Window"))
@@ -412,41 +432,72 @@ class MainWindowUI:
         if not dirs:
             self.showError("[SYSTEM] The directory is not selected")
             return
-        self.imagedir = Path(dirs)
-        self.roijsonfile = None
-        self.jpgfilenamelist = []
-        self.show_message(
-            f"[SYSTEM] The directory is selected at: {str(self.imagedir)}"
-        )
-        for file in glob_files(self.imagedir):
-            if file.name.lower().endswith((".jpg", ".jpeg")):
-                self.jpgfilenamelist.append(file.name)
-            elif file.name.endswith(".json"):
-                self.roijsonfile = file.path
-                self.show_message(f"[SYSTEM] Find a JSON file: {file.name}")
-        self.jpgfilenamelist.sort()
-        if not len(self.jpgfilenamelist):
+        jsonfiles = (f for f in Path(dirs).glob("*.json") if not f.name.startswith("."))
+        self.roijsonfile = max(jsonfiles, key=lambda f: f.name, default=None)
+        self.show_message(f"[SYSTEM] The directory is selected at: {str(dirs)}")
+        self.ims = Imagestack().set_folder(dirs)
+
+        if not len(self.ims):
+            self.ims = None
             self.show_message(
                 "[SYSTEM] The directory does not have any jpg files"
             ).update
             return self
 
-        self.ims = Imagestack().setdir(self.imagedir, self.jpgfilenamelist)
-        (
-            self.update_maximum_value(0)
-            .setup_process_boundary(len(self.jpgfilenamelist) - 1)
+        return (
+            self.reset_value_boundary()
             .setroi()
-            .show_message(f"Image numbers: {len(self.jpgfilenamelist):d}")
+            .setview()
+            .show_message(f"Image numbers: {len(self.ims)}")
         )
 
+    def setview(self):
+        if self.ims is None or not len(self.ims):
+            return self
+        self.view.setMaximum(len(self.ims) - 1)
+        img = self.ims.read_image(0)
+        H, W = img.shape[:2]
+        self.resize(self.width() + W + 20, max(H + 50, self.height()))
+        self.view.setGeometry(QtCore.QRect(640, 20, W, H + 20))
+        self.view.imshow(self.roicol.drawrois(img), 0)
+        self.view.valueChanged.connect(self.draw_view)
         return self
 
-    def setup_process_boundary(self, totalnum: int) -> "MainWindowUI":
+    def draw_view(self):
+        img = self.ims.read_image(self.view.value)
+
+        if self.show_subtract:
+            binary = np.zeros_like(img, dtype=np.uint8)
+            if self.view.value != 0:
+                pre = self.ims.read_image(self.view.value - 1)
+                _, _, binary = (
+                    Subtractor(self.threshold, self.normalized)
+                    .set_image(pre, 0)
+                    .set_image(img, 1)
+                    .subtract()
+                    .median_blur()
+                    .threshold_binarize()
+                    .get_results()
+                )
+            img = binary.astype(np.uint8) * 255
+
+        img_roi = self.roicol.drawrois(img)
+        self.view.imshow(img_roi)
+
+    def reset_value_boundary(self) -> "MainWindowUI":
+        total = len(self.ims) - 1
+        x_max = self.ims.img_width
+        y_max = self.ims.img_height
+        self.doubleSpinBox_x.setMaximum(x_max)
+        self.horizontalSlider_x.setMaximum(x_max)
+        self.doubleSpinBox_y.setMaximum(y_max)
+        self.horizontalSlider_y.setMaximum(y_max)
+
         self.spinBox_start.setValue(0)
-        self.spinBox_end.setValue(totalnum)
-        self.spinBox_start.setMaximum(totalnum)
-        self.spinBox_end.setMaximum(totalnum)
-        self.spinBox_step.setMaximum(totalnum)
+        self.spinBox_end.setValue(total)
+        self.spinBox_start.setMaximum(total)
+        self.spinBox_end.setMaximum(total)
+        self.spinBox_step.setMaximum(total)
         return self
 
     def doubleSpinBox_value_update(self, **kwargs):
@@ -454,18 +505,18 @@ class MainWindowUI:
         y = self.horizontalSlider_y.value()
         self.doubleSpinBox_x.setValue(x)
         self.doubleSpinBox_y.setValue(y)
-        if isinstance(self.ims, type(Imagestack)):
-            self.setroi()
-        self.update
+        self.setroi().update
 
     def horizontalSlider_value_update(self, **kwargs):
         x = self.doubleSpinBox_x.value()
         y = self.doubleSpinBox_y.value()
         self.horizontalSlider_x.setValue(int(x))
         self.horizontalSlider_y.setValue(int(y))
-        if isinstance(self.ims, type(Imagestack)):
-            self.setroi()
-        self.update
+        self.setroi().update
+
+    def show_roi(self, event=None) -> "MainWindowUI":
+        if self.ims is None or not len(self.ims):
+            return self
 
     def get_row_and_col(self):
         col, row = tuple(map(int, self.comboBox_matrix.currentText().split(" x ")))
@@ -484,33 +535,35 @@ class MainWindowUI:
         self.update
 
     def setroi(self) -> "MainWindowUI":
-        if self.checkBox_json.isChecked():
-            if self.roijsonfile:
-                self.roicol = RoiCollection.from_json(self.roijsonfile)
-                roisarg = self.roicol.roidict.get("roisarg")
-                if roisarg:
-                    roicolnum = int(roisarg["roicolnum"])
-                    roirownum = int(roisarg["roirownum"])
-                    roiintervalx = float(roisarg["roiintervalx"])
-                    roiintervaly = float(roisarg["roiintervaly"])
-                    x = int(roisarg["x"])
-                    y = int(roisarg["y"])
-                    width = int(roisarg["width"])
-                    height = int(roisarg["height"])
-                    radianrot = roisarg["radianrot"]
-                    rotate = radianrot * 180 / np.pi
+        if getattr(self, "ims", None) is None:
+            return
 
-                    self.spinBox_columns.setValue(roicolnum)
-                    self.spinBox_rows.setValue(roirownum)
-                    self.doubleSpinBox_x_interval.setValue(roiintervalx)
-                    self.doubleSpinBox_y_interval.setValue(roiintervaly)
-                    self.doubleSpinBox_x.setValue(x)
-                    self.horizontalSlider_x.setValue(x)
-                    self.doubleSpinBox_y.setValue(y)
-                    self.horizontalSlider_y.setValue(y)
-                    self.doubleSpinBox_width.setValue(width)
-                    self.doubleSpinBox_height.setValue(height)
-                    self.doubleSpinBox_rotate.setValue(rotate)
+        if self.checkBox_json.isChecked() and self.roijsonfile:
+            self.roicol = RoiCollection.from_json(self.roijsonfile)
+            roisarg = self.roicol.roidict.get("roisarg")
+            if roisarg:
+                roicolnum = int(roisarg["roicolnum"])
+                roirownum = int(roisarg["roirownum"])
+                roiintervalx = float(roisarg["roiintervalx"])
+                roiintervaly = float(roisarg["roiintervaly"])
+                x = int(roisarg["x"])
+                y = int(roisarg["y"])
+                width = int(roisarg["width"])
+                height = int(roisarg["height"])
+                radianrot = roisarg["radianrot"]
+                rotate = radianrot * 180 / np.pi
+
+                self.spinBox_columns.setValue(roicolnum)
+                self.spinBox_rows.setValue(roirownum)
+                self.doubleSpinBox_x_interval.setValue(roiintervalx)
+                self.doubleSpinBox_y_interval.setValue(roiintervaly)
+                self.doubleSpinBox_x.setValue(x)
+                self.horizontalSlider_x.setValue(x)
+                self.doubleSpinBox_y.setValue(y)
+                self.horizontalSlider_y.setValue(y)
+                self.doubleSpinBox_width.setValue(width)
+                self.doubleSpinBox_height.setValue(height)
+                self.doubleSpinBox_rotate.setValue(rotate)
 
         else:
             # self.roilist = []
@@ -518,14 +571,13 @@ class MainWindowUI:
             roi_kws = self.get_rois_kws()
             ymax, xmax = None, None
             if self.ims:
-                ymax, xmax = self.ims[self.ims.slicepos].shape[:2]
+                xmax = self.ims.img_width
+                ymax = self.ims.img_height
 
             roi_kws.update(xmax=xmax, ymax=ymax)
             self.roicol = RoiCollection().set_rois(**roi_kws)
 
-        if self.ims:
-            self.ims.showrois(self.roicol)
-
+        self.view.imshow(self.roicol.drawrois(self.ims.read_image(self.view.value)))
         return self
 
     def get_rois_kws(self) -> Dict[str, Any]:
@@ -545,99 +597,100 @@ class MainWindowUI:
         if self.imagedir is None:
             self.showError("[SYSTEM] The directory is not selected")
             return
-        if self.outputdata is not None:
-            # np.savetxt(os.path.join(self.imagedir, "np_area.csv"), self.outputdata, delimiter = ",", fmt = "%d")
-            df = pd.DataFrame(self.outputdata, columns=["Area"] * len(self.roicol))
-            df.to_csv(os.path.join(self.imagedir, "area.csv"), index=False)
-            self.show_message("[SYSTEM] area.csv was saved at %s" % self.imagedir)
-
-        if self.roicol is not None:
-            jsonpath = os.path.join(self.imagedir, "Roi.json")
-            dump_json(jsonpath, self.roicol.roidict)
-            self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)
 
     def startprocess(self):
-        if not self.jpgfilenamelist:
+        if not self.ims or not len(self.ims):
             return
+        self.show_message(f"[SYSTEM] Start at: {get_time()}")
+        start_time = time.perf_counter()
 
-        self.show_message("[SYSTEM] Processing...")
-        startslice = int(self.spinBox_start.value())
-        endslice = int(self.spinBox_end.value())
-        threshold = float(self.doubleSpinBox_threshold.value())
-        slicestep = int(self.spinBox_step.value())
-        processnum = (endslice - startslice) // slicestep
-        pre_normalized = self.checkBox_prenormalized.isChecked()
-
-        self.subtwindowname = "subtmed"
-        cv2.namedWindow(self.subtwindowname, cv2.WINDOW_NORMAL)
-        if self.ims is not None:
-            tempimage = self.ims[0]
-            empty_img = np.zeros(tempimage.shape)
-            cv2.imshow(self.subtwindowname, empty_img)
-
-        cv2.createTrackbar(
-            "slice",
-            self.subtwindowname,
-            0,
-            processnum - 1,
-            self.showsubtmedimg,
+        processnum, task = self.ims.create_task_queue(
+            self.startslice, self.endslice, self.slicestep
         )
-
         self.outputdata = np.zeros((processnum, len(self.roicol)), dtype=int)
-        subtractor = ParallelSubtractor().setup_workers(
-            image_queue=self.ims.get_image_queue(startslice, endslice, slicestep),
+        subtractors = ParallelSubtractor().setup_workers(
+            processnum=processnum,
+            task=task,
             roicollection=self.roicol.copy(),
-            threshold=threshold,
-            normalized=self.checkBox_prenormalized.isChecked(),
+            threshold=self.threshold,
+            normalized=self.normalized,
             saveflag=False,
         )
+
+        dump_json(self.ims.homedir / "Roi.json", self.roicol.roidict)
+        self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)
+        self.view.progress.setValue(0)
+        self.view.progress.setVisible(True)
         self.ip = Imageprocess(
-            self,
-            winname=self.subtwindowname,
-            threshold=threshold,
-            slicestep=slicestep,
-            normalized=pre_normalized,
-        ).setup_parallel_subtractor(subtractor=subtractor, outputdata=self.outputdata)
-        self.ip.start()
-        self.checkBox_lock.setCheckState(2)
+            subtractor=subtractors,
+            outputdir=self.ims.homedir,
+            progress=self.view.progress,
+        )
+        try:
+            self.ip.start()
+            self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Checked)
+            self.hide()
+            tbar = tqdm(desc=f"[{self.ims.homedir.name}]", total=processnum)
+            while True:
+                if self.ip.current_progress_num() is None:
+                    break
+                tbar.update()
+            tbar.close()
+            self.ip.join()
+            self.show_message(f"[SYSTEM] End at: {get_time()}")
+            elapse = time.perf_counter() - start_time
+
+            self.show_message(f"[SYSTEM] Elapse: {elapse:.2f} (Sec)")
+        finally:
+            self.show()
+            self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
+
+    @property
+    def threshold(self):
+        return float(self.doubleSpinBox_threshold.value())
+
+    @property
+    def imagedir(self) -> Optional[Path]:
+        if self.ims is None:
+            return None
+        return self.ims.homedir
+
+    @property
+    def startslice(self) -> int:
+        return int(self.spinBox_start.value())
+
+    @property
+    def endslice(self) -> int:
+        return int(self.spinBox_end.value())
+
+    @property
+    def slicestep(self) -> int:
+        return int(self.spinBox_step.value())
+
+    @property
+    def normalized(self) -> bool:
+        return self.checkBox_prenormalized.isChecked()
+
+    @property
+    def show_subtract(self) -> bool:
+        return self.checkBox_sub.isChecked()
 
     def showsubtmedimg(self, n):
-        # if self.ip.is_alive():
-        #    print("ip is alive")
-        # """
         if self.ip.is_alive():
             return
-        # print("ip is Not alive")
-        self.threshold = float(self.doubleSpinBox_threshold.value())
-        # print(n)
-        # print(self.threshold)
-        if n < self.ims.nslice - 1:
-            prenorm = self.checkBox_prenormalized.isChecked()
-            subtractor = Subtractor(prenorm)
-            subtractor.setinitialimage(self.ims[n])
-            subimage = subtractor.subtractfromholdingimage(self.ims[n + 1])
-            subtmedimg = cv2.medianBlur(subimage, 5)
-            # print(subtmedimg.shape)#(768,1024,3)
-            olimg = self.overlaythreshold(subtmedimg, self.threshold)
-            # cv2.imshow(self.subtwindowname, subtmedimg)
-            cv2.imshow(self.subtwindowname, olimg)
-            # cv2.setTrackbarPos('slice',self.windowname,i)
 
-    def overlaythreshold(self, img, val):
-        # colimg = np.zeros(img.shape, dtype = np.uint8)
-        threshold = 127 - val * 12.8
-        # print(threshold)
-        retval, binaryimg = cv2.threshold(
-            img[:, :, 2], threshold, 1, cv2.THRESH_BINARY_INV
-        )
-        # mask = cv2.inRange(img, np.array([0,0,0]),np.array([val,val,val]))
-        # red channel =2, green =1, blue = 0
-        # colimg[:,:,2][binaryimg == 1] = 255
-        img[:, :, 2][binaryimg.astype(bool)] = 255
-        # colimg[:,:,2][img[:,:,2] < threshold] = 255
-        # colimg[img < val] = [[[0,0,255]]]
-        # return colimg + img
-        return img
+        if n < len(self.ims) - 2:
+            prenorm = self.checkBox_prenormalized.isChecked()
+            _, blur, binary = (
+                Subtractor(self.threshold, prenorm)
+                .set_image(self.ims.read_image(n), 0)
+                .set_image(self.ims.read_image(n + 1), 1)
+                .subtract()
+                .median_blur()
+                .threshold_binarize()
+                .get_results()
+            )
+            blur[binary][2] = 255
 
     def on_key(self, event):
         if self.checkBox_lock.isChecked():

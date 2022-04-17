@@ -4,6 +4,8 @@ from typing import OrderedDict
 import cv2
 import numpy as np
 
+__all__ = ["Roi"]
+
 
 @dataclass(frozen=True, order=True)
 class Roi:

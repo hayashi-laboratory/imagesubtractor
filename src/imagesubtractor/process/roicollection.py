@@ -2,11 +2,12 @@ import functools
 from collections import UserList
 from typing import Dict, List, Optional
 
-import cv2
 import numpy as np
 
+from ..utils import load_json
 from .roi import Roi
-from .utils import load_json
+
+__all__ = ["RoiCollection"]
 
 
 class RoiCollection(UserList):
@@ -76,18 +77,16 @@ class RoiCollection(UserList):
         )
         return self
 
-    def showrois(self, baseimage: np.ndarray, winname: str):
+    def drawrois(self, src: np.ndarray) -> np.ndarray:
         # slicepos = self.ims.slicepos
         data: List[Roi] = self.data
+        out = src.copy()
         if data:
             # def show(self, slicepos):
             # baseimage = self.ims.getaimage(slicepos)
-            modimage = functools.reduce(lambda img, roi: roi.show(img), data, baseimage)
-            cv2.imshow(winname, modimage)
-        else:
-            cv2.imshow(winname, baseimage)
+            out = functools.reduce(lambda img, roi: roi.show(img), data, out)
+        return out
 
-    # the img must be binary. 0 or 1
     def measureareas(self, img):
         return np.fromiter((roi.measurearea(img) for roi in self.data), int)
 
