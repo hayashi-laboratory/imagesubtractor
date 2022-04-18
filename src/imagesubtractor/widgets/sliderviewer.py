@@ -1,3 +1,4 @@
+from numpy import ndarray
 from PySide2 import QtCore, QtWidgets
 
 from .imageviewer import ImageViewer
@@ -16,7 +17,9 @@ class SliderViewer(QtWidgets.QWidget):
         self.slider.setSingleStep(1)
         self.slider.setMaximum(processnum)
 
-        self.progress = QtWidgets.QProgressBar(self)
+        self.progress = QtWidgets.QProgressBar(parent)
+        self.setRange = self.progress.setRange
+        self.setValue = self.progress.setValue
         self.valueChanged = self.slider.valueChanged
 
         self.canvas = ImageViewer(self)
@@ -27,8 +30,12 @@ class SliderViewer(QtWidgets.QWidget):
 
     def setMaximum(self, max_val: int):
         self.slider.setMaximum(max_val)
-        self.progress.setMaximum(max_val)
 
     @property
     def value(self) -> int:
         return self.slider.value()
+
+    def imshow(self, image: ndarray, pos: int = None):
+        if isinstance(pos, int):
+            self.slider.setValue(pos)
+        self.canvas.render_image(image, self.width(), self.height())

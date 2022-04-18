@@ -1,6 +1,6 @@
-from PySide2 import QtGui, QtWidgets, QtCore
 import cv2
 from numpy import ndarray
+from PySide2 import QtCore, QtGui, QtWidgets
 
 
 class ImageViewer(QtWidgets.QGraphicsView):
@@ -18,6 +18,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
         src: ndarray,
         win_width: int = None,
         win_height: int = None,
+        keep_aspect_ratio=True,
     ):
         if src.ndim == 2:
             img = cv2.cvtColor(src, cv2.COLOR_GRAY2RGB)
@@ -28,8 +29,13 @@ class ImageViewer(QtWidgets.QGraphicsView):
 
         h, w, _ = img.shape
         self.data = img
-        win_width = win_width if win_width is not None else h
+        win_width = win_width if win_width is not None else w
         win_height = win_height if win_height is not None else h
+        keep_ratio = (
+            QtCore.Qt.KeepAspectRatio
+            if keep_aspect_ratio
+            else QtCore.Qt.IgnoreAspectRatio
+        )
         qimg = QtGui.QImage(
             self.data.data,
             w,
@@ -39,7 +45,7 @@ class ImageViewer(QtWidgets.QGraphicsView):
         ).scaled(
             win_width,
             win_height,
-            QtCore.Qt.KeepAspectRatio,
+            keep_ratio,
         )
         item = QtWidgets.QGraphicsPixmapItem(self.pixel.fromImageInPlace(qimg))
         item.setPos(0, 0)

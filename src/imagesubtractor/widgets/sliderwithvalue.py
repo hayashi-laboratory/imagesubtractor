@@ -1,4 +1,4 @@
-from PySide2 import QtCore, QtWidgets, QtGui
+from PySide2 import QtCore, QtGui, QtWidgets
 
 
 class SliderWithValue(QtWidgets.QSlider):

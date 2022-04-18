@@ -23,7 +23,7 @@ class Imageprocess(threading.Thread):
         self.outputfile = Path(outputdir).joinpath("area.csv")
         self.queue = queue.Queue()
 
-    def processing(self):
+    def retrieve(self):
         return self.queue.get()
 
     def run(self):
@@ -38,9 +38,9 @@ class Imageprocess(threading.Thread):
         while True:
             i, subtmedimg, areadata = self.subtractors.retrieve()
             if i is None:
-                self.queue.put(False)
+                self.queue.put((None, subtmedimg))
                 break
-            self.queue.put(True)
+            self.queue.put((i, subtmedimg))
             outputarr[i] = areadata
 
         pd.DataFrame(outputarr).to_csv(

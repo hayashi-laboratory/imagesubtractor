@@ -23,7 +23,6 @@ import sys
 
 from PySide2.QtCore import QLibraryInfo
 from PySide2.QtWidgets import QApplication
-import cv2
 
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
@@ -33,7 +32,7 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
 from .mainwindow import MainWindow
 
 
-def main(argv= None):
+def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
     app = QApplication(argv)
