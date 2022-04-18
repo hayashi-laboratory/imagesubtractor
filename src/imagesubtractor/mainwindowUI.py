@@ -1,13 +1,10 @@
-from datetime import timedelta
 import functools
 import os
 from pathlib import Path
 import time
 from typing import Any, Dict, Optional
 
-import cv2
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtWidgets import (
@@ -35,7 +32,7 @@ from .process import (
     RoiCollection,
     Subtractor,
 )
-from .processwindow import ProcessWindow
+from .widgets import SliderViewer
 from .utils import dump_json, get_time
 
 
@@ -281,7 +278,7 @@ class MainWindowUI:
         self.doubleSpinBox_threshold.setDecimals(2)
         self.doubleSpinBox_threshold.setObjectName("doubleSpinBox_threshold")
 
-        self.view = ProcessWindow(self, 1000)
+        self.view = SliderViewer(self, 1000)
         self.view.setGeometry(QtCore.QRect(640, 20, 300, 400))
         self.view.setObjectName("view")
 
@@ -302,6 +299,7 @@ class MainWindowUI:
         self.spinBox_step = QSpinBox(self.centralwidget)
         self.spinBox_step.setGeometry(QtCore.QRect(420, 245, 68, 25))
         self.spinBox_step.setValue(self.__slicestep)
+        self.spinBox_step.setMinimum(1)
         self.spinBox_step.setMaximum(100000)
         self.spinBox_step.setObjectName("spinBox_step")
 
@@ -455,11 +453,13 @@ class MainWindowUI:
         if self.ims is None or not len(self.ims):
             return self
         self.view.setMaximum(len(self.ims) - 1)
+        self.view.slider.setTickInterval(len(self.ims) // 10)
         img = self.ims.read_image(0)
         H, W = img.shape[:2]
         self.resize(self.width() + W + 20, max(H + 50, self.height()))
         self.view.setGeometry(QtCore.QRect(640, 20, W, H + 20))
         self.view.imshow(self.roicol.drawrois(img), 0)
+        self.checkBox_sub.clicked.connect(self.draw_view)
         self.view.valueChanged.connect(self.draw_view)
         return self
 
@@ -497,7 +497,7 @@ class MainWindowUI:
         self.spinBox_end.setValue(total)
         self.spinBox_start.setMaximum(total)
         self.spinBox_end.setMaximum(total)
-        self.spinBox_step.setMaximum(total)
+        self.spinBox_step.setMaximum(total - 1)
         return self
 
     def doubleSpinBox_value_update(self, **kwargs):
@@ -624,23 +624,19 @@ class MainWindowUI:
         self.ip = Imageprocess(
             subtractor=subtractors,
             outputdir=self.ims.homedir,
-            progress=self.view.progress,
         )
         try:
             self.ip.start()
             self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Checked)
             self.hide()
-            tbar = tqdm(desc=f"[{self.ims.homedir.name}]", total=processnum)
-            while True:
-                if self.ip.current_progress_num() is None:
-                    break
-                tbar.update()
-            tbar.close()
+            with tqdm(desc=f"[{self.ims.homedir.name}]", total=processnum) as tbar:
+                while self.ip.processing():
+                    tbar.update()
             self.ip.join()
             self.show_message(f"[SYSTEM] End at: {get_time()}")
             elapse = time.perf_counter() - start_time
-
             self.show_message(f"[SYSTEM] Elapse: {elapse:.2f} (Sec)")
+
         finally:
             self.show()
             self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
@@ -711,18 +707,3 @@ class MainWindowUI:
 
             elif event.key() == QtCore.Qt.Key_D:
                 increment = 1
-
-            self.ims.slicepos = (self.ims.slicepos + increment) % self.ims.nslice
-            cv2.setTrackbarPos("slice", self.ims.winname, self.ims.slicepos)
-            self.ims.readaimage(self.ims.slicepos)
-            self.update_maximum_value(self.ims.slicepos)
-            return
-
-    def update_maximum_value(self, pos: int) -> "MainWindowUI":
-        tempimage = self.ims[pos]
-        max_y, max_x = tempimage.shape[:2]
-        self.doubleSpinBox_x.setMaximum(max_x)
-        self.horizontalSlider_x.setMaximum(max_x)
-        self.doubleSpinBox_y.setMaximum(max_y)
-        self.horizontalSlider_y.setMaximum(max_y)
-        return self
