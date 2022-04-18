@@ -10,42 +10,43 @@ This application is code refactoring from `imagesubtandmeasure.py` that created 
 ## Requirements
 
 - python >= 3.7.10
-- opencv-python <= 4.5.1.48
+- opencv-python-headless
 - pandas
 - numpy
 - PySide2
 
-### Using pip
 
-```shell
-pip install -r requirements.txt
-```
-
-### Using conda
-
-```shell
-conda create --file requirements.yaml
-```
-
-## Run Application
-
-### conda environment
-
-```shell
-conda activate imagesubtractor
-python app.py
-```
+## Installation and running
 
 ### pip environment (Linux/mac)
+- Installation:
+```shell
+~$ python3 -m venv .venv
+
+~$ source .venv/bin/activate
+
+(.venv) ~$ pip install -U git+https://github.com/lycantrope/imagesubtractor
+```
+- Running application:
 
 ```shell
-source ./bin/activate
-python app.py
+~$ source .venv/bin/activate
+~$ imagesubtractor
 ```
 
 ### pip environment (Windows)
+- Installation:
 
 ```shell
-.\Scripts\activate.bat
-python app.py
+(PS) ~$ python3 -m venv .venv
+
+(PS) ~$ source .venv\Scripts\activate.bat
+
+(PS)(.venv) ~$ pip install -U git+https://github.com/lycantrope/imagesubtractor
+```
+- Running application:
+
+```shell
+(PS) ~$ source .venv\Scripts\activate.bat
+(PS) ~$ imagesubtractor
 ```
