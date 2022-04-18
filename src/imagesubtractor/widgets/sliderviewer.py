@@ -17,15 +17,11 @@ class SliderViewer(QtWidgets.QWidget):
         self.slider.setSingleStep(1)
         self.slider.setMaximum(processnum)
 
-        self.progress = QtWidgets.QProgressBar(parent)
-        self.setRange = self.progress.setRange
-        self.setValue = self.progress.setValue
         self.valueChanged = self.slider.valueChanged
 
         self.canvas = ImageViewer(self)
         layout.addWidget(self.slider)
         layout.addWidget(self.canvas)
-        layout.addWidget(self.progress)
         self.show()
 
     def setMaximum(self, max_val: int):

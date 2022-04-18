@@ -142,8 +142,9 @@ class MainWindow(QMainWindow, MainWindowUI):
         self.view.slider.setTickInterval(len(self.ims) // 10)
         img = self.ims.read_image(0)
         H, W = img.shape[:2]
-        self.resize(self.width() + W + 20, max(H + 70, self.height()))
+        self.resize(self.width() + W + 20, max(H + 75, self.height()))
         self.view.setGeometry(QtCore.QRect(640, 20, W, H + 50))
+        self.progressbar.setGeometry(QtCore.QRect(650, H + 75, W-10, 35))
         self.view.imshow(self.roicol.draw_rois(img), 0)
         self.checkBox_sub.clicked.connect(self.draw_view)
         self.view.valueChanged.connect(self.draw_view)
@@ -306,13 +307,14 @@ class MainWindow(QMainWindow, MainWindowUI):
 
         dump_json(self.ims.homedir / "Roi.json", self.roicol.roidict)
         self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)
-        self.view.setRange(0, processnum)
+        self.progressbar.setRange(0, processnum)
+        self.progressbar.show()
         qt = ImageProcessQWorker(self, subtractors, self.ims.homedir)
         qt.start()
 
         def finish():
             self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
-            self.view.progress.hide()
+            self.progressbar.hide()
 
         qt.process_result.connect(self.show_process)
         qt.finished.connect(finish)
@@ -322,7 +324,7 @@ class MainWindow(QMainWindow, MainWindowUI):
             return
         i, image = task
         self.view.imshow(image)
-        self.view.setValue(i)
+        self.progressbar.setValue(i)
 
     def showsubtmedimg(self, n):
         if self.ip.is_alive():

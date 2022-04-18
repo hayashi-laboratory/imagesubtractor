@@ -257,6 +257,11 @@ class MainWindowUI:
         self.view = SliderViewer(self, 1000)
         self.view.setGeometry(QtCore.QRect(640, 20, 300, 400))
         self.view.setObjectName("view")
+        
+        self.progressbar = QtWidgets.QProgressBar(self)
+        self.progressbar.setMaximumHeight(20)
+        self.progressbar.hide()
+        self.progressbar.setObjectName("progressbar")
 
         self.contrast_view = ContrastWidget(self)
         self.contrast_view.setGeometry(QtCore.QRect(30, 400, 270, 200))
