@@ -2,13 +2,10 @@ import multiprocessing as mp
 import os
 import threading
 
-
 from .queue_item import Result
-
 from .roicollection import RoiCollection
 from .subtractor import Subtractor
 from .worker import SubtractorWorker
-
 
 __all__ = ["ParallelSubtractor"]
 
@@ -34,6 +31,7 @@ class ParallelSubtractor(threading.Thread):
     ) -> "ParallelSubtractor":
 
         self.processnum = processnum
+        self.roinum = len(roicollection)
         self.workers = [
             SubtractorWorker(
                 task,

@@ -32,8 +32,9 @@ from .process import (
     RoiCollection,
     Subtractor,
 )
+
 from .widgets import SliderViewer
-from .utils import dump_json, get_time
+from .utils import dump_json, timer
 
 
 def qfont(
@@ -601,45 +602,44 @@ class MainWindowUI:
     def startprocess(self):
         if not self.ims or not len(self.ims):
             return
-        self.show_message(f"[SYSTEM] Start at: {get_time()}")
-        start_time = time.perf_counter()
+        with timer(self.show_message):
+            processnum, task = self.ims.create_task_queue(
+                self.startslice, self.endslice, self.slicestep
+            )
+            self.outputdata = np.zeros((processnum, len(self.roicol)), dtype=int)
+            subtractors = ParallelSubtractor().setup_workers(
+                processnum=processnum,
+                task=task,
+                roicollection=self.roicol.copy(),
+                threshold=self.threshold,
+                normalized=self.normalized,
+                saveflag=False,
+            )
 
-        processnum, task = self.ims.create_task_queue(
-            self.startslice, self.endslice, self.slicestep
-        )
-        self.outputdata = np.zeros((processnum, len(self.roicol)), dtype=int)
-        subtractors = ParallelSubtractor().setup_workers(
-            processnum=processnum,
-            task=task,
-            roicollection=self.roicol.copy(),
-            threshold=self.threshold,
-            normalized=self.normalized,
-            saveflag=False,
-        )
+            dump_json(self.ims.homedir / "Roi.json", self.roicol.roidict)
+            self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)
+            self.view.progress.setValue(0)
+            self.view.progress.setVisible(True)
+            self.ip = Imageprocess(
+                subtractor=subtractors,
+                outputdir=self.ims.homedir,
+                progress=self.view.progress,
+            )
+            try:
+                self.ip.start()
+                self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Checked)
+                self.hide()
+                tbar = tqdm(desc=f"[{self.ims.homedir.name}]", total=processnum)
+                while True:
+                    if self.ip.current_progress_num() is None:
 
-        dump_json(self.ims.homedir / "Roi.json", self.roicol.roidict)
-        self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)
-        self.view.progress.setValue(0)
-        self.view.progress.setVisible(True)
-        self.ip = Imageprocess(
-            subtractor=subtractors,
-            outputdir=self.ims.homedir,
-        )
-        try:
-            self.ip.start()
-            self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Checked)
-            self.hide()
-            with tqdm(desc=f"[{self.ims.homedir.name}]", total=processnum) as tbar:
-                while self.ip.processing():
+                        break
                     tbar.update()
-            self.ip.join()
-            self.show_message(f"[SYSTEM] End at: {get_time()}")
-            elapse = time.perf_counter() - start_time
-            self.show_message(f"[SYSTEM] Elapse: {elapse:.2f} (Sec)")
-
-        finally:
-            self.show()
-            self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
+                tbar.close()
+                self.ip.join()
+            finally:
+                self.show()
+                self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
 
     @property
     def threshold(self):

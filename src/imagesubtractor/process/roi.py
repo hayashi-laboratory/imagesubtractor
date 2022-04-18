@@ -15,10 +15,8 @@ class Roi:
     height: int = field(compare=False)
     order: int = field(compare=True)
 
-    # def show(self, slicepos):
     def show(self, image: np.ndarray) -> np.ndarray:
         modimage = image
-        # 0,255,255 yellow
         FONT = cv2.FONT_HERSHEY_SIMPLEX
         YELLOW = (0, 255, 255)
         cv2.putText(
