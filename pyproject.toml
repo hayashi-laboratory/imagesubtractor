@@ -4,21 +4,31 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "imagesubtractor"
-authors = [{name = "Taizo Kawano", email = "t3kawano@gmail.com"}]
-maintainers = [{name = "Taizo Kawano", email = "t3kawano@gmail.com"}, {name = "Chung-Kuan Chen", email = "b97b01045@gmail.com"}]
+authors = [{ name = "Taizo Kawano", email = "t3kawano@gmail.com" }]
+maintainers = [
+        { name = "Taizo Kawano", email = "t3kawano@gmail.com" },
+        { name = "Chung-Kuan Chen", email = "b97b01045@gmail.com" },
+]
 readme = "README.md"
-license = {file = "LICENSE"}
-classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)"]
+license = { file = "LICENSE" }
+classifiers = [
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
 dynamic = ["version", "description"]
 dependencies = [
-            "opencv-python",
-            "pandas",
-            "numpy",
-            "dataclasses",
-            "PySide2",
+        "opencv-python-headless",
+        "pandas",
+        "numpy",
+        "dataclasses",
+        "PySide2",
+        "tqdm",
 ]
 [project.urls]
 Home = "https://github.com/lycantrope/imagesubtractor"
 
+[project.optional-dependencies]
+dev = ["black", "pre-commit"]
+
 [project.scripts]
 imagesubtractor = "imagesubtractor.app:main"
+imagesubtractortk = "imagesubtractor.apptk:main"

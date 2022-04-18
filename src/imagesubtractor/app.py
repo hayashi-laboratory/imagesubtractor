@@ -20,30 +20,26 @@ Refactored on Thu Jun 17 12:43:46 2020
 
 import os
 import sys
-from pathlib import Path
 
-import PySide2
+from PySide2.QtCore import QLibraryInfo
+from PySide2.QtWidgets import QApplication
 
-os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.fspath(
-    Path(PySide2.__file__).resolve().parent / "Qt" / "plugins"
+os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
+    QLibraryInfo.PluginsPath
 )
-from PySide2 import QApplication
-import cv2
+
 
 from .mainwindow import MainWindow
 
 
-def main(argv):
-    try:
-        app = QApplication(argv)
-        appUI = MainWindow()
-        appUI.show()
-        appUI.raise_()
-        app.exec_()
-    finally:
-        cv2.waitKey(1)
-        cv2.destroyAllWindows()
-        cv2.waitKey(1)
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    app = QApplication(argv)
+    appUI = MainWindow()
+    appUI.show()
+    appUI.raise_()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":

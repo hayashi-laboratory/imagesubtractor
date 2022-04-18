@@ -2,11 +2,12 @@ import functools
 from collections import UserList
 from typing import Dict, List, Optional
 
-import cv2
 import numpy as np
 
+from ..utils import load_json
 from .roi import Roi
-from .utils import load_json
+
+__all__ = ["RoiCollection"]
 
 
 class RoiCollection(UserList):
@@ -76,18 +77,12 @@ class RoiCollection(UserList):
         )
         return self
 
-    def showrois(self, baseimage: np.ndarray, winname: str):
-        # slicepos = self.ims.slicepos
-        data: List[Roi] = self.data
-        if data:
-            # def show(self, slicepos):
-            # baseimage = self.ims.getaimage(slicepos)
-            modimage = functools.reduce(lambda img, roi: roi.show(img), data, baseimage)
-            cv2.imshow(winname, modimage)
-        else:
-            cv2.imshow(winname, baseimage)
+    def draw_rois(self, image: np.ndarray) -> np.ndarray:
+        return functools.reduce(self.draw_a_roi, self.data, image)
 
-    # the img must be binary. 0 or 1
+    def draw_a_roi(self, image: np.ndarray, roi: Roi) -> np.ndarray:
+        return roi.show(image)
+
     def measureareas(self, img):
         return np.fromiter((roi.measurearea(img) for roi in self.data), int)
 
@@ -96,7 +91,7 @@ class RoiCollection(UserList):
         params_dict = load_json(path)
         if "rois" in params_dict:
             rois_dict = params_dict.get("rois")
-        elif any(lambda num: num in params_dict, range(48)) and len(params_dict) == 48:
+        elif any(lambda num: num in params_dict, range(48)) or len(params_dict) == 48:
             rois_dict = params_dict
         rois = (Roi(**kws) for kws in rois_dict.values())
         return cls(sorted(rois, key=lambda x: x.order)).set_roisarg(
