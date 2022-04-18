@@ -20,7 +20,7 @@ This application is code refactoring from `imagesubtandmeasure.py` that created 
 
 ### pip environment (Linux/mac)
 - Installation:
-```shell
+```Shell
 ~$ python3 -m venv .venv
 
 ~$ source .venv/bin/activate
@@ -29,24 +29,24 @@ This application is code refactoring from `imagesubtandmeasure.py` that created 
 ```
 - Running application:
 
-```shell
+```Shell
 ~$ source .venv/bin/activate
-~$ imagesubtractor
+(.venv) ~$ imagesubtractor
 ```
 
 ### pip environment (Windows)
 - Installation:
 
-```shell
-(PS) ~$ python3 -m venv .venv
+```PowerShell
+> python3 -m venv .venv
 
-(PS) ~$ source .venv\Scripts\activate.bat
+> .\.venv\Scripts\activate.bat
 
-(PS)(.venv) ~$ pip install -U git+https://github.com/lycantrope/imagesubtractor
+(.venv)> pip install -U git+https://github.com/lycantrope/imagesubtractor
 ```
 - Running application:
 
-```shell
-(PS) ~$ source .venv\Scripts\activate.bat
-(PS) ~$ imagesubtractor
+```PowerShell
+> .\.venv\Scripts\activate.bat
+(.venv)> imagesubtractor
 ```
