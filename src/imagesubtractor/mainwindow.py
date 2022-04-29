@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+import cv2
 import numpy as np
 from PySide2 import QtCore
 from PySide2.QtWidgets import (
@@ -12,18 +13,16 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 
-
 from .mainwindowUI import MainWindowUI
 from .process import (
     Contrast,
-    Imageprocess,
     ImageProcessQWorker,
     Imagestack,
     ParallelSubtractor,
     RoiCollection,
     Subtractor,
 )
-from .utils import dump_json, timer
+from .utils import dump_json
 
 
 class MainWindow(QMainWindow, MainWindowUI):
@@ -70,12 +69,18 @@ class MainWindow(QMainWindow, MainWindowUI):
         # change style
         self.styleComboBox.activated[str].connect(self.changeStyle)
 
+        # bind step with slider
+        self.spinBox_step.editingFinished.connect(
+            lambda: self.view.setStep(self.slicestep)
+        )
+
         # lock all buttons except lock buttom
         for obj in self.findChild(QWidget).children():
-            if "checkBox_lock" in obj.objectName() or "view" in obj.objectName():
+            if "checkBox_lock" in obj.objectName():
                 continue
             self.checkBox_lock.toggled.connect(obj.setDisabled)
-
+        self.checkBox_lock.toggled.connect(self.view.setDisabled)
+        self.checkBox_lock.toggled.connect(self.contrast_view.setDisabled)
         self.checkBox_json.toggled.connect(self.setroi)
         self.checkBox_prenormalized.toggled.connect(self.showNormState)
 
@@ -144,22 +149,22 @@ class MainWindow(QMainWindow, MainWindowUI):
         H, W = img.shape[:2]
         self.resize(self.width() + W + 20, max(H + 75, self.height()))
         self.view.setGeometry(QtCore.QRect(640, 20, W, H + 50))
-        self.progressbar.setGeometry(QtCore.QRect(650, H + 75, W-10, 35))
+        self.progressbar.setGeometry(QtCore.QRect(650, H + 75, W - 10, 35))
         self.view.imshow(self.roicol.draw_rois(img), 0)
         self.checkBox_sub.clicked.connect(self.draw_view)
         self.view.valueChanged.connect(self.draw_view)
         return self
 
     def draw_view(self):
+        self.set_text_num(self.view.value)
         img = self.ims.read_image(self.view.value)
         self.contrast_view.imshow(self.cr.draw_histogram(img))
         if self.cr.adjusted:
             img = self.cr.draw_contrast(img)
-
         if self.show_subtract:
             binary = np.zeros_like(img, dtype=np.uint8)
-            if self.view.value != 0:
-                pre = self.ims.read_image(self.view.value - 1)
+            if self.view.value >= self.slicestep:
+                pre = self.ims.read_image(self.view.value - self.slicestep)
                 _, _, binary = (
                     Subtractor(self.threshold, self.normalized)
                     .set_image(pre, 0)
@@ -172,6 +177,11 @@ class MainWindow(QMainWindow, MainWindowUI):
             img = binary.astype(np.uint8) * 255
         img_roi = self.roicol.draw_rois(img)
         self.view.imshow(img_roi)
+
+    def set_text_num(self, num: int):
+        if self.ims is None or not len(self.ims):
+            return
+        self.num_window.setText(f"{num+1}/{len(self.ims)}")
 
     def reset_value_boundary(self) -> "MainWindow":
         total = len(self.ims) - 1
@@ -304,17 +314,20 @@ class MainWindow(QMainWindow, MainWindowUI):
             normalized=self.normalized,
             saveflag=False,
         )
-
+        self.__roi_mask = self.roicol.draw_rois(np.zeros_like(self.ims.read_image(0)))
         dump_json(self.ims.homedir / "Roi.json", self.roicol.roidict)
         self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)
         self.progressbar.setRange(0, processnum)
         self.progressbar.show()
         qt = ImageProcessQWorker(self, subtractors, self.ims.homedir)
         qt.start()
+        self.__processnum = processnum
 
         def finish():
             self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
             self.progressbar.hide()
+            del self.__roi_mask
+            del self.__processnum
 
         qt.process_result.connect(self.show_process)
         qt.finished.connect(finish)
@@ -323,6 +336,8 @@ class MainWindow(QMainWindow, MainWindowUI):
         if task is None:
             return
         i, image = task
+        self.set_text_num(i, self.__processnum)
+        image = cv2.addWeighted(image, 1, self.__roi_mask, 1, 0)
         self.view.imshow(image)
         self.progressbar.setValue(i)
 

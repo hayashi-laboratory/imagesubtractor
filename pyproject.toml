@@ -30,5 +30,4 @@ Home = "https://github.com/lycantrope/imagesubtractor"
 dev = ["black", "pre-commit"]
 
 [project.scripts]
-imagesubtractor = "imagesubtractor.app:main"
-imagesubtractortk = "imagesubtractor.apptk:main"
+imagesubtractor = "imagesubtractor.app:run_app"

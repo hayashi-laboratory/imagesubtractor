@@ -34,7 +34,7 @@ class Subtractor:
         if not isinstance(im1, np.ndarray) or not isinstance(im2, np.ndarray):
             raise TypeError(f"images are not properly set. {(im1, im2)}")
 
-        subtimgf32 = im2 - im1
+        subtimgf32 = im1 - im2
         if self.normalized:
             sub_img = self.convertfloatTo8bit(subtimgf32, -2.5, 2.5)
         else:

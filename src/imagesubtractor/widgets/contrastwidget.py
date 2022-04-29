@@ -92,3 +92,8 @@ class ContrastWidget(QtWidgets.QWidget):
     def reset_value(self):
         self.low.setValue(0)
         self.high.setValue(255)
+
+    def setDisabled(self, disable: bool) -> None:
+        self.low.setDisabled(disable)
+        self.high.setDisabled(disable)
+        self.reset_btn.setDisabled(disable)

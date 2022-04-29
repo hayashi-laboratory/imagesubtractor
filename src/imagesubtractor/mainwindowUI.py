@@ -18,6 +18,7 @@ from PySide2.QtWidgets import (
     QStatusBar,
     QStyleFactory,
     QWidget,
+    QLineEdit,
 )
 
 from .widgets import ContrastWidget, SliderViewer
@@ -103,6 +104,18 @@ class MainWindowUI:
         self.styleComboBox.setCurrentIndex(0)
         self.changeStyle("Fusion")
         self.styleComboBox.setObjectName("styleComboBox")
+
+        # slide number display
+        self.num_window = QLineEdit(self.centralwidget)
+        self.num_window.setReadOnly(True)
+        self.num_window.setGeometry(QtCore.QRect(470, 85, 141, 45))
+        self.num_window.setDragEnabled(False)
+        self.num_window.setAlignment(QtCore.Qt.AlignCenter)
+        self.num_window.setFont(qfont(bold=True, weight=200, pointsize=16.0))
+        self.num_window.setObjectName("num_window")
+        self.num_window.setStyleSheet(
+            "QLineEdit {background-color: rgb(12, 12, 12); color: rgb(19, 161, 14);}"
+        )
 
         # open button
         self.pushButton_open = QPushButton(self.centralwidget)
@@ -257,7 +270,7 @@ class MainWindowUI:
         self.view = SliderViewer(self, 1000)
         self.view.setGeometry(QtCore.QRect(640, 20, 300, 400))
         self.view.setObjectName("view")
-        
+
         self.progressbar = QtWidgets.QProgressBar(self)
         self.progressbar.setMaximumHeight(20)
         self.progressbar.hide()
