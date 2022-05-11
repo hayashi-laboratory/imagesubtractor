@@ -14,6 +14,7 @@ class SliderViewer(QtWidgets.QWidget):
         self.slider.setOrientation(QtCore.Qt.Horizontal)
         self.slider.setTickInterval(1)
         self.slider.setSingleStep(1)
+        self.slider.setPageStep(1)
         self.slider.setMaximum(processnum)
 
         self.valueChanged = self.slider.valueChanged
