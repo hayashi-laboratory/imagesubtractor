@@ -147,7 +147,7 @@ class MainWindow(QMainWindow, MainWindowUI):
         self.view.slider.setTickInterval(len(self.ims) // 10)
         img = self.ims.read_image(0)
         H, W = img.shape[:2]
-        self.resize(self.width() + W + 20, max(H + 75, self.height()))
+        self.resize(640 + W + 20, max(H + 75, 610))
         self.view.setGeometry(QtCore.QRect(640, 20, W, H + 50))
         self.progressbar.setGeometry(QtCore.QRect(650, H + 75, W - 10, 35))
         self.view.imshow(self.roicol.draw_rois(img), 0)
@@ -336,7 +336,7 @@ class MainWindow(QMainWindow, MainWindowUI):
         if task is None:
             return
         i, image = task
-        self.set_text_num(i, self.__processnum)
+        self.set_text_num(i)
         image = cv2.addWeighted(image, 1, self.__roi_mask, 1, 0)
         self.view.imshow(image)
         self.progressbar.setValue(i)
