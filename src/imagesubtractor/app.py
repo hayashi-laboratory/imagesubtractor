@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import sys
 
@@ -9,7 +10,7 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
 )
 
 
-from .mainwindow import MainWindow
+from imagesubtractor.mainwindow import MainWindow
 
 
 def run_app(argv=None):
@@ -20,3 +21,7 @@ def run_app(argv=None):
     appUI.show()
     appUI.raise_()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    run_app()
