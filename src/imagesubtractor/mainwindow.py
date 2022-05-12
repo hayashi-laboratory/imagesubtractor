@@ -321,13 +321,12 @@ class MainWindow(QMainWindow, MainWindowUI):
         self.progressbar.show()
         qt = ImageProcessQWorker(self, subtractors, self.ims.homedir)
         qt.start()
-        self.__processnum = processnum
-
+        
         def finish():
             self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
             self.progressbar.hide()
+            self.__roi_mask = None
             del self.__roi_mask
-            del self.__processnum
 
         qt.process_result.connect(self.show_process)
         qt.finished.connect(finish)

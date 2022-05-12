@@ -13,7 +13,7 @@ __all__ = ["ParallelSubtractor"]
 class ParallelSubtractor(threading.Thread):
     def __init__(
         self,
-        num_workers: int = min(os.cpu_count(), 4),
+        num_workers: int = min(os.cpu_count(), 3),
     ):
         super().__init__(daemon=True)
         self.output_queue: mp.Queue = mp.Queue()
@@ -45,14 +45,26 @@ class ParallelSubtractor(threading.Thread):
         return self
 
     def run(self):
-        for p in self.workers:
-            p.start()
-        for p in self.workers:
-            p.join()
-        self.output_queue.put(Result())
+        try:
+            for p in self.workers:
+                p.start()
+            for p in self.workers:
+                p.join()
+        except Exception as e:
+            print(e)
+            self.kill_workers()
+        finally:
+            self.output_queue.put(Result())
 
     def retrieve(self) -> Result:
         return self.output_queue.get()
 
     def empty(self) -> bool:
         return self.output_queue.qsize() == 0
+
+    def kill_workers(self):
+        try:
+            for p in self.workers:
+                p.kill()
+        except Exception as e:
+            print(e)

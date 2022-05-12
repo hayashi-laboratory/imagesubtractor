@@ -236,6 +236,7 @@ class MainWindowUI:
         self.horizontalSlider_x.setMaximum(2048)
         self.horizontalSlider_x.setTickInterval(1)
         self.horizontalSlider_x.setSingleStep(1)
+        self.horizontalSlider_x.setPageStep(1)
         self.horizontalSlider_x.setOrientation(QtCore.Qt.Horizontal)
         self.horizontalSlider_x.setObjectName("horizontalSlider_x")
 
@@ -255,6 +256,7 @@ class MainWindowUI:
         self.horizontalSlider_y.setMaximum(2048)
         self.horizontalSlider_y.setTickInterval(1)
         self.horizontalSlider_y.setSingleStep(1)
+        self.horizontalSlider_y.setPageStep(1)
         self.horizontalSlider_y.setOrientation(QtCore.Qt.Horizontal)
         self.horizontalSlider_y.setObjectName("horizontalSlider_y")
 
