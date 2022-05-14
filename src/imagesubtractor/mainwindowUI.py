@@ -25,12 +25,20 @@ from .widgets import ContrastWidget, SliderViewer
 
 
 def qfont(
-    fonttype="Helvetica",
+    fonttype=None,
     pointsize=None,
     bold=None,
     weight=None,
 ) -> QtGui.QFont:
-    font = QtGui.QFont(fonttype)
+    if fonttype is None:
+        font = QtGui.QFont("Helvetica")
+        database = QtGui.QFontDatabase()
+        font_path = Path(__file__).parent.joinpath("fonts", "NotoSans-Regular.ttf")
+        font_id = database.addApplicationFont(str(font_path))
+        if not font_id < 0:
+            families = QtGui.QFontDatabase.applicationFontFamilies(font_id)
+            fonttype = families[0]
+    font = QtGui.QFont(fonttype or "Helvetica")
     if pointsize is not None:
         font.setPointSize(pointsize)
     if bold is not None:

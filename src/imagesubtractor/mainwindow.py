@@ -105,7 +105,8 @@ class MainWindow(QMainWindow, MainWindowUI):
         return self.show_message(msg)
 
     def askdirectory(self) -> "MainWindow":
-        dialog = QFileDialog(self)
+        default = str(Path.home() / "Desktop")
+        dialog = QFileDialog(self, directory=default)
         dirs = dialog.getExistingDirectory()
         if not dirs:
             self.showError("[SYSTEM] The directory is not selected")
@@ -204,14 +205,14 @@ class MainWindow(QMainWindow, MainWindowUI):
         y = self.horizontalSlider_y.value()
         self.doubleSpinBox_x.setValue(x)
         self.doubleSpinBox_y.setValue(y)
-        self.setroi().update
+        self.setroi()
 
     def horizontalSlider_value_update(self, **kwargs):
         x = self.doubleSpinBox_x.value()
         y = self.doubleSpinBox_y.value()
         self.horizontalSlider_x.setValue(int(x))
         self.horizontalSlider_y.setValue(int(y))
-        self.setroi().update
+        self.setroi()
 
     def show_roi(self, event=None) -> "MainWindow":
         if self.ims is None or not len(self.ims):
@@ -222,7 +223,7 @@ class MainWindow(QMainWindow, MainWindowUI):
         self.spinBox_columns.setValue(col)
         self.spinBox_rows.setValue(row)
         if self.ims is not None:
-            tempimage = self.ims[0]
+            tempimage = self.ims.read_image(0)
             imageshape = tempimage.shape
             iwidth = imageshape[1]
             iheight = imageshape[0]
@@ -231,7 +232,6 @@ class MainWindow(QMainWindow, MainWindowUI):
             self.horizontalSlider_value_update(xinterval=xinterval, yinterval=yinterval)
             self.doubleSpinBox_value_update(xinterval=xinterval, yinterval=yinterval)
             self.setroi()
-        self.update
 
     def setroi(self) -> "MainWindow":
         if getattr(self, "ims", None) is None:
@@ -321,7 +321,7 @@ class MainWindow(QMainWindow, MainWindowUI):
         self.progressbar.show()
         qt = ImageProcessQWorker(self, subtractors, self.ims.homedir)
         qt.start()
-        
+
         def finish():
             self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Unchecked)
             self.progressbar.hide()
