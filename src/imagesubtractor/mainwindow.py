@@ -1,9 +1,9 @@
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import cv2
 import numpy as np
-from PySide2 import QtCore
+from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -13,6 +13,7 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 
+from .icon import ICON_DATA
 from .mainwindowUI import MainWindowUI
 from .process import (
     Contrast,
@@ -29,6 +30,7 @@ class MainWindow(QMainWindow, MainWindowUI):
     def __init__(self, **kwargs):
         super(self.__class__, self).__init__()
         self.setupUi(self)
+        self.set_icon()
         self.ims = None
         self.outputdata = None
         self.roijsonfile = None
@@ -355,3 +357,13 @@ class MainWindow(QMainWindow, MainWindowUI):
                 .get_results()
             )
             blur[binary][2] = 255
+
+    def set_icon(self):
+        qimg = QtGui.QImage.fromData(
+            QtCore.QByteArray.fromBase64(ICON_DATA),
+            "PNG",
+        )
+        pixelmap = QtGui.QPixmap.fromImage(qimg)
+        icon = QtGui.QIcon()
+        icon.addPixmap(pixelmap, mode=QtGui.QIcon.Normal)
+        self.setWindowIcon(icon)
