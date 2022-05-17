@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from PySide2 import QtCore
 from tqdm import tqdm
-from ..utils import timer
 
+from ..utils import chmod_remove_executable, timer
 from .parallel_subtractor import ParallelSubtractor
 
 __all__ = ["ImageProcessQWorker"]
@@ -39,7 +39,8 @@ class ImageProcessQWorker(QtCore.QThread):
             )
             with timer():
                 with tqdm(
-                    desc=f"[{self.outputfile.parent}]", total=self.subtractors.processnum
+                    desc=f"[{self.outputfile.parent}]",
+                    total=self.subtractors.processnum,
                 ) as tbar:
                     count = 0
                     cache: Dict[int, np.ndarray] = {}
@@ -66,6 +67,7 @@ class ImageProcessQWorker(QtCore.QThread):
                     index=False,
                     header=["Area" for _ in range(self.subtractors.roinum)],
                 )
+                chmod_remove_executable(self.outputfile)
                 print(f"[SYSTEM] area.csv was saved at {self.outputfile}")
         finally:
             self.subtractors.kill_workers()

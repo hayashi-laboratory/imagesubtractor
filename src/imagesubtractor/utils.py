@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import stat
 import time
 from contextlib import contextmanager
 from typing import Callable, Dict
@@ -27,9 +28,17 @@ def load_json(path: str) -> Dict:
         print("[ERROR] %s" % e)
 
 
+def chmod_remove_executable(path):
+    if os.path.exists(path) and os.path.isfile(path):
+        st = os.stat(path)
+        S_IXALL = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(path, st.st_mode & ~S_IXALL)
+
+
 def dump_json(path: str, data: dict) -> None:
     with open(path, mode="w") as file:
         json.dump(data, file, indent=4)
+    chmod_remove_executable(path)
 
 
 def get_time() -> str:
