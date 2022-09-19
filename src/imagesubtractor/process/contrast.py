@@ -5,11 +5,11 @@ import numpy as np
 class Contrast:
     def __init__(self):
         self.imgheight = 180
-        self.imgwidth = 220
+        self.imgwidth = 384
         self.min = 0
         self.max = 255
 
-    def set_range(self, min_=None, max_=None) -> "Contrast":
+    def set_range(self, min_=0, max_=255) -> "Contrast":
         if isinstance(min_, int):
             self.min = min_
         if isinstance(max_, int):
@@ -31,8 +31,8 @@ class Contrast:
         cv2.fillPoly(histimagesorce, [points], (255, 204, 153))
         histimage = np.fliplr(histimagesorce).astype(np.uint8)
 
-        if self.min != 0 or self.max != 255:
-            self.drawaline(histimage)
+        if self.adjusted:
+            histimage = self.drawaline(histimage)
 
         return histimage
 
@@ -45,20 +45,37 @@ class Contrast:
         return verts.round(0).astype(int)
 
     def drawaline(self, image: np.ndarray):
-        min_ = int(self.min * self.imgwidth / 255)
-        max_ = int(self.max * self.imgwidth / 255)
+        min_ = round(self.min / 255.0 * self.imgwidth)
+        max_ = round(self.max / 255.0 * self.imgwidth)
+
+        mask = np.zeros_like(image, np.uint8)
+        mask[:, :min_] = (222, 0, 0)
+        mask[:, max_:] = (0, 0, 222)
         cv2.line(
             image,
             (min_, 0),
             (min_, self.imgheight),
             (255, 0, 0),
+            1,
+            cv2.LINE_AA,
         )
         cv2.line(
             image,
             (max_, 0),
             (max_, self.imgheight),
             (0, 0, 255),
+            1,
+            cv2.LINE_AA,
         )
+        cv2.line(
+            image,
+            (min_, self.imgheight),
+            (max_, 0),
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+        )
+        return cv2.addWeighted(image, 1.0, mask, 0.75, 1.0)
 
     def calclut(self) -> np.ndarray:
         # make look up table with min max

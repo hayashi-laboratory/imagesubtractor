@@ -123,7 +123,7 @@ class MainWindow(QMainWindow, MainWindowUI):
             self.cr = None
             self.show_message(
                 "[SYSTEM] The directory does not have any jpg files"
-            ).update
+            ).update()
             return self
 
         return (
@@ -194,12 +194,12 @@ class MainWindow(QMainWindow, MainWindowUI):
         self.horizontalSlider_x.setMaximum(x_max)
         self.doubleSpinBox_y.setMaximum(y_max)
         self.horizontalSlider_y.setMaximum(y_max)
-
-        self.spinBox_start.setValue(0)
-        self.spinBox_end.setValue(total)
+        # change spinbox range before set value
         self.spinBox_start.setMaximum(total)
         self.spinBox_end.setMaximum(total)
         self.spinBox_step.setMaximum(total - 1)
+        self.spinBox_start.setValue(0)
+        self.spinBox_end.setValue(total)
         return self
 
     def doubleSpinBox_value_update(self, **kwargs):
