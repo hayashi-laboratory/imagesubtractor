@@ -4,11 +4,11 @@ from pathlib import Path
 
 import cv2
 
-from .queue_item import Result
+from .queue_item import Result, Task
 from .roicollection import RoiCollection
 from .subtractor import Subtractor
 
-__all__ = ["SubtractorWorker"]
+__all__ = ["SubtractorWorker", "subtract_worker_func"]
 
 
 class SubtractorWorker(mp.Process):
@@ -47,3 +47,29 @@ class SubtractorWorker(mp.Process):
 
             areadata = self.roicol.measureareas(binary)
             self.output.put(Result(num, subtract, areadata))
+
+
+def subtract_worker_func(
+    task: Task,
+    roicollection: RoiCollection,
+    subtractor: Subtractor,
+    saveflag: bool = False,
+):
+    num, p1, p2 = task
+    if num is None:
+        return
+    subtract, blur, binary = (
+        subtractor.set_image(cv2.imread(p1), 0)  # img1
+        .set_image(cv2.imread(p2), 1)  # img2
+        .subtract()  # img2 -img1 -> subtract
+        .median_blur(ksize=5)  # subtract -> blur
+        .threshold_binarize()  # blur -> binary
+        .get_results()  # retrieve subtract, blur, binary
+    )
+    if saveflag:
+        filepath = Path(p1).parent.joinpath(f"{num:0>6}_sub.tif")
+        cv2.imwrite(os.fspath(filepath), blur)
+        print("saved in", filepath)
+
+    areadata = roicollection.measureareas(binary)
+    return Result(num, subtract, areadata)

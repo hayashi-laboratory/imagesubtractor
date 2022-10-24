@@ -1,5 +1,6 @@
+import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import cv2
 import numpy as np
@@ -20,6 +21,7 @@ from .process import (
     ImageProcessQWorker,
     Imagestack,
     ParallelSubtractor,
+    PoolSubtractor,
     RoiCollection,
     Subtractor,
 )
@@ -113,6 +115,9 @@ class MainWindow(QMainWindow, MainWindowUI):
         if not dirs:
             self.showError("[SYSTEM] The directory is not selected")
             return
+        self.setup_imagestack(dirs)
+
+    def setup_imagestack(self, dirs: Path):
         jsonfiles = (f for f in Path(dirs).glob("*.json") if not f.name.startswith("."))
         self.roijsonfile = max(jsonfiles, key=lambda f: f.name, default=None)
         self.show_message(f"[SYSTEM] The directory is selected at: {str(dirs)}")
@@ -299,23 +304,41 @@ class MainWindow(QMainWindow, MainWindowUI):
             self.showError("[SYSTEM] The directory is not selected")
             return
 
-    def startprocess(self):
-        if not self.ims or not len(self.ims):
-            return
+    def setup_process_type(self, proc_type="multi") -> Tuple[int, ParallelSubtractor]:
+        proc_type = proc_type.lower()
+        if proc_type not in ("multi", "pool"):
+            raise TypeError(proc_type)
 
-        self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Checked)
-        processnum, task = self.ims.create_task_queue(
-            self.startslice, self.endslice, self.slicestep
-        )
+        create_task = self.ims.create_task_queue
+        setup_subtractor = ParallelSubtractor().setup_workers
+
+        # TODO
+        if proc_type == "pool":
+            create_task = self.ims.create_list_tasks
+            setup_subtractor = PoolSubtractor().setup_pool
+
+        processnum, task = create_task(self.startslice, self.endslice, self.slicestep)
         self.outputdata = np.zeros((processnum, len(self.roicol)), dtype=int)
-        subtractors = ParallelSubtractor().setup_workers(
+
+        subtractors = setup_subtractor(
             processnum=processnum,
-            task=task,
+            tasks=task,
             roicollection=self.roicol.copy(),
             threshold=self.threshold,
             normalized=self.normalized,
             saveflag=False,
         )
+        return processnum, subtractors
+
+    def startprocess(self):
+        if not self.ims or not len(self.ims):
+            return
+
+        self.checkBox_lock.setCheckState(QtCore.Qt.CheckState.Checked)
+        # processnum, task = self.ims.create_task_queue(
+        #     self.startslice, self.endslice, self.slicestep
+        # )
+        processnum, subtractors = self.setup_process_type()
         self.__roi_mask = self.roicol.draw_rois(np.zeros_like(self.ims.read_image(0)))
         dump_json(self.ims.homedir / "Roi.json", self.roicol.roidict)
         self.show_message("[SYSTEM] Roi.json was saved at %s" % self.imagedir)

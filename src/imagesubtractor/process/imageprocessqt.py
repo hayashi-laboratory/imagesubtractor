@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -7,7 +7,7 @@ from PySide2 import QtCore
 from tqdm import tqdm
 
 from ..utils import chmod_remove_executable, timer
-from .parallel_subtractor import ParallelSubtractor
+from .parallel_subtractor import ParallelSubtractor, PoolSubtractor
 
 __all__ = ["ImageProcessQWorker"]
 
@@ -19,13 +19,13 @@ class ImageProcessQWorker(QtCore.QThread):
     def __init__(
         self,
         parent,
-        subtractor: ParallelSubtractor,
+        subtractor: Union[ParallelSubtractor, PoolSubtractor],
         outputdir: Path,
     ) -> "ImageProcessQWorker":
         super().__init__(parent=parent)
 
         self.subtractors = subtractor
-        self.outputfile = Path(outputdir).joinpath("area.csv")
+        self.outputfile = Path(outputdir).joinpath("Area.csv")
 
     def run(self):
         try:

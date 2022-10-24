@@ -24,13 +24,16 @@ class Imagestack:
 
     def set_folder(self, homedir: Union[str, Path]) -> "Imagestack":
         self.homedir = Path(homedir)
-        self.imagelist = [
-            f
-            for f in self.homedir.glob("*.*")
-            if f.is_file()
-            and f.name.lower().endswith((".jpg", ".jpeg", ".png"))
-            and not f.name.startswith(".")
-        ]
+        self.imagelist = sorted(
+            [
+                f
+                for f in self.homedir.glob("*.*")
+                if f.is_file()
+                and f.name.lower().endswith((".jpg", ".jpeg", ".png"))
+                and not f.name.startswith(".")
+            ],
+            key=lambda f: f.stem,
+        )
         if self.imagelist:
             self.img_height, self.img_width = self.read_image(0).shape[:2]
         return self
@@ -58,3 +61,20 @@ class Imagestack:
             )
         task.put_nowait(Task())
         return num + 1, task
+
+    def create_list_tasks(
+        self,
+        start: int,
+        end: int,
+        slicestep: int,
+    ) -> Tuple[int, List[Task]]:
+        step_num = range(start, end + 1, slicestep)
+        tasks = [
+            Task(
+                num,
+                os.fspath(self.imagelist[img1]),
+                os.fspath(self.imagelist[img2]),
+            )
+            for num, (img1, img2) in enumerate(zip(step_num[:-1], step_num[1:]))
+        ]
+        return len(tasks), tasks

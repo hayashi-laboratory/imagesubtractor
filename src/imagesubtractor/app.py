@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import multiprocessing
 import os
 import sys
+import threading
 
 from PySide2.QtCore import QLibraryInfo
 from PySide2.QtWidgets import QApplication
@@ -20,7 +22,9 @@ def run_app(argv=None):
     appUI = MainWindow()
     appUI.show()
     appUI.raise_()
-    sys.exit(app.exec_())
+    ret = app.exec_()
+    multiprocessing.Event().clear()
+    sys.exit(ret)
 
 
 if __name__ == "__main__":

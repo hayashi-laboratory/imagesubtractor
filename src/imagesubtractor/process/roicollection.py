@@ -11,6 +11,10 @@ __all__ = ["RoiCollection"]
 
 
 class RoiCollection(UserList):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.data: List[Roi]
+
     @property
     def roidict(self) -> Dict[str, Dict]:
         return dict(
@@ -83,7 +87,7 @@ class RoiCollection(UserList):
     def draw_a_roi(self, image: np.ndarray, roi: Roi) -> np.ndarray:
         return roi.show(image)
 
-    def measureareas(self, img):
+    def measureareas(self, img: np.ndarray) -> np.ndarray:
         return np.fromiter((roi.measurearea(img) for roi in self.data), int)
 
     @classmethod

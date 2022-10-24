@@ -9,3 +9,9 @@ __pycache__/
 .venv/
 
 images/
+
+# pyinstaller
+dist/
+build/
+*.desktop
+*.spec
