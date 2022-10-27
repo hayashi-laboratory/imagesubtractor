@@ -104,9 +104,9 @@ class MainWindowUI:
         # gui palette box
         self.styleComboBox = QComboBox(self.centralwidget)
         self.styleComboBox.setGeometry(QtCore.QRect(480, 50, 121, 25))
-        styles = QStyleFactory.keys()
-        self.styleComboBox.addItems(["Fusion"])
-        self.styleComboBox.addItems(style for style in styles if "Fusion" not in style)
+        styles = ["Fusion"]
+        styles.extend(s for s in QStyleFactory.keys() if "Fusion" not in s)
+        self.styleComboBox.addItems(styles)
         self.styleLabel = QLabel("&Style:")
         self.styleLabel.setBuddy(self.styleComboBox)
         self.styleComboBox.setCurrentIndex(0)
@@ -213,9 +213,7 @@ class MainWindowUI:
         self.comboBox_matrix.setGeometry(QtCore.QRect(480, 10, 121, 25))
         self.comboBox_matrix.setAutoFillBackground(False)
         self.comboBox_matrix.setEditable(False)
-        _dcombinations = ["12 x 8", "8 x 6", "6 x 4", "4 x 3"]
-        for item in _dcombinations:
-            self.comboBox_matrix.addItem(item)
+        self.comboBox_matrix.addItems(["12 x 8", "8 x 6", "6 x 4", "4 x 3", "Custom"])
         self.comboBox_matrix.setCurrentIndex(1)
         self.comboBox_matrix.setObjectName("comboBox_matrix")
 

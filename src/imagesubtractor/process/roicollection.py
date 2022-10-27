@@ -88,7 +88,7 @@ class RoiCollection(UserList):
         return roi.show(image)
 
     def measureareas(self, img: np.ndarray) -> np.ndarray:
-        return np.fromiter((roi.measurearea(img) for roi in self.data), int)
+        return np.fromiter((roi.measurearea(img) for roi in self.data), "u4")
 
     @classmethod
     def from_json(cls, path: str) -> "RoiCollection":

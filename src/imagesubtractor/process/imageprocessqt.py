@@ -35,7 +35,7 @@ class ImageProcessQWorker(QtCore.QThread):
                     self.subtractors.processnum,
                     self.subtractors.roinum,
                 ),
-                dtype=int,
+                dtype="u4",
             )
             with timer():
                 with tqdm(
@@ -61,15 +61,25 @@ class ImageProcessQWorker(QtCore.QThread):
                     for i, img in cache_list:
                         self.process_result.emit((i, img))
                         tbar.update()
-
+                cache_list = []
                 pd.DataFrame(outputarr).to_csv(
                     self.outputfile,
                     index=False,
-                    header=["Area" for _ in range(self.subtractors.roinum)],
+                    header=["Area"] * self.subtractors.roinum,
                 )
-                chmod_remove_executable(self.outputfile)
-                print(f"[SYSTEM] area.csv was saved at {self.outputfile}")
+
+                print(f"[SYSTEM] Area.csv was saved at {self.outputfile.parent}")
+        except Exception as e:
+            pd.DataFrame(outputarr).to_csv(
+                self.outputfile,
+                index=False,
+                header=["Area"] * self.subtractors.roinum,
+            )
+            print(f"[ERROR] Unfinished Area.csv was saved at {self.outputfile.parent}")
+            raise e
         finally:
-            self.subtractors.kill_workers()
+            cache_list = []
+            chmod_remove_executable(self.outputfile)
             self.process_result.emit(None)
             self.finished.emit()
+            self.subtractors.kill_workers()

@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
@@ -125,7 +124,7 @@ class MainWindow(QMainWindow, MainWindowUI):
 
         if not len(self.ims):
             self.ims = None
-            self.cr = None
+            self.cr = Contrast()
             self.show_message(
                 "[SYSTEM] The directory does not have any jpg files"
             ).update()
@@ -226,7 +225,10 @@ class MainWindow(QMainWindow, MainWindowUI):
             return self
 
     def get_row_and_col(self):
-        col, row = tuple(map(int, self.comboBox_matrix.currentText().split(" x ")))
+        _state = self.comboBox_matrix.currentText()
+        if "custom" in _state.lower():
+            return
+        col, row = map(int, _state.split(" x "))
         self.spinBox_columns.setValue(col)
         self.spinBox_rows.setValue(row)
         if self.ims is not None:
@@ -241,6 +243,13 @@ class MainWindow(QMainWindow, MainWindowUI):
             self.setroi()
 
     def setroi(self) -> "MainWindow":
+        ncol, nrow = int(self.spinBox_columns.value()), int(self.spinBox_rows.value())
+        defaults = [(12, 8), (8, 6), (6, 4), (4, 3)]
+        if (ncol, nrow) not in defaults:
+            self.comboBox_matrix.setCurrentIndex(4)
+        else:
+            self.comboBox_matrix.setCurrentIndex(defaults.index((ncol, nrow)))
+
         if getattr(self, "ims", None) is None:
             return
 

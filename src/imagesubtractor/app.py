@@ -2,7 +2,6 @@
 import multiprocessing
 import os
 import sys
-import threading
 
 from PySide2.QtCore import QLibraryInfo
 from PySide2.QtWidgets import QApplication
