@@ -2,6 +2,7 @@
 import multiprocessing
 import os
 import sys
+import platform
 
 from PySide2.QtCore import QLibraryInfo
 from PySide2.QtWidgets import QApplication
@@ -9,7 +10,8 @@ from PySide2.QtWidgets import QApplication
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
 )
-
+if platform.system() == "Darwin":
+    os.environ["QT_MAC_WANTS_LAYER"] = "1"
 
 from imagesubtractor.mainwindow import MainWindow
 
