@@ -5,7 +5,7 @@
 <a href="https://github.com/lycantrope/imagesubtractor/blob/main/License"><img alt="license: GPL-3.0" src="https://img.shields.io/github/license/lycantrope/imagesubtractor.svg"></a>
 </p>
 
-This application is code refactoring from `imagesubtandmeasure.py` that created by Taizo Kawano.
+This application is code refactoring of `imagesubtandmeasure.py` created by Taizo Kawano.
 
 ## Requirements
 
@@ -18,7 +18,7 @@ This application is code refactoring from `imagesubtandmeasure.py` that created 
 
 ## Installation and running
 
-### pip environment (Linux/mac)
+### pip environment (Linux/MacOS)
 - Installation:
 ```Shell
 ~$ python3 -m venv .venv
